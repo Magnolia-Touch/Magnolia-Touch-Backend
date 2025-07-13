@@ -1,0 +1,126 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+
+
+model User {
+  customer_id   Int    @id @default(autoincrement())
+  customer_name String
+  email         String @unique
+  Phone         String @unique
+  password      String
+
+  Orders  Orders[]
+  Grave   Grave[]
+  Booking Booking[]
+  Reviews Reviews[]
+}
+
+model Products {
+  product_id           Int     @id @default(autoincrement())
+  product_name         String
+  price                Float
+  box_contains         String?
+  short_Description    String
+  detailed_description String?
+  company_guarantee    String?
+  order_ids            Int
+
+  Dimensions ProductDimension[]
+  orders     Orders             @relation(fields: [order_ids], references: [Order_id])
+}
+
+model Orders {
+  Order_id         Int     @id @default(autoincrement())
+  User_id          Int
+  Order_Status     String
+  Total_Amount     Float
+  Payment_Details  String
+  Tracking_Details String
+  user             User @relation(fields: [User_id], references: [customer_id])
+
+  product Products[]
+}
+
+model ProductDimension {
+  dimension_id       Int       @id @default(autoincrement())
+  dimension          String
+  Products           Products? @relation(fields: [productsProduct_id], references: [product_id])
+  productsProduct_id Int?
+}
+
+model Grave {
+  Grave_id Int    @id @default(autoincrement())
+  User_id  Int
+  Address  String
+
+  user    User   @relation(fields: [User_id], references: [customer_id])
+  Booking Booking[]
+}
+
+model SubscriptionPlan {
+  Subscription_id   Int    @id @default(autoincrement())
+  Service_Name      String
+  Subscription_name String
+  Frequency         Int
+  Price             Float
+
+  bookings Booking[]
+}
+
+model Flowers {
+  flower_id   Int     @id @default(autoincrement())
+
+  Name        String
+  Price       Float
+  Description String?
+  in_stock    Boolean @default(false)
+
+  bookings Booking[]
+}
+
+model Booking {
+  booking_id         Int       @id @default(autoincrement())
+  User_id            Int
+  Grave_id           Int
+  Subscription_id    Int
+  date1              DateTime
+  date2              DateTime?
+  Flower_id          Int
+  booking_date       DateTime
+  next_cleaning_date DateTime?
+  status             String
+
+  user         User          @relation(fields: [User_id], references: [customer_id])
+  grave        Grave            @relation(fields: [Grave_id], references: [Grave_id])
+  subscription SubscriptionPlan @relation(fields: [Subscription_id], references: [Subscription_id])
+  flower       Flowers          @relation(fields: [Flower_id], references: [flower_id])
+
+}
+
+model Reviews {
+  Review_id          Int    @id @default(autoincrement())
+  User_Id            Int
+  Review_Description String
+  Rating             Int
+
+  user User @relation(fields: [User_Id], references: [customer_id])
+
+}
+
+
+
