@@ -1,22 +1,30 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaClient } from 'src/generated/prisma/';
+import { PrismaService } from 'src/prisma/prisma.service';
+import { CreateUserDto } from './dto/createuser.dto';
+import { CreateUserAddressDto } from './dto/create-user-address.dto';
+import { CreateBillingAddressDto } from './dto/create-billing-address.dto';
 
 @Injectable()
 export class UserService {
-  constructor(private prisma: PrismaClient) {}
+  constructor(private prisma: PrismaService) {}
 
-  async createUser(data: {email: string; password: string; customer_name: string; Phone: string }) {
+  // user creation functions
+  async createUser(dto: CreateUserDto) {
+    const { email, password, customer_name, Phone, role } = dto;
     return await this.prisma.user.create({ data: {
-      customer_name: data.customer_name,
-      email: data.email,
-      password: data.password,
-      Phone: data.Phone
+      customer_name: customer_name,
+      email: email,
+      password: password,
+      Phone: Phone,
+      role: role
     } });
   }
+
 
   async findUserByEmaiorphone(email: string) {
     return await this.prisma.user.findUnique({ where: { email } });
   }
+
 
   async updateUser(
     id: number,
@@ -25,19 +33,43 @@ export class UserService {
     return await this.prisma.user.update({ where: { customer_id: id }, data });
   }
 
+
   async deleteUser(id: number) {
     return await this.prisma.user.delete({ where: { customer_id: id } });
   }
+
 
   async validateUser(email: string, password: string) {
     const user = await this.prisma.user.findUnique({
       where: { email },
     });
-    // Password validation logic (e.g., bcrypt.compare)
     if (user && user.password === password) {
       return user; // Or return some safe object
     }
     return null;
   }
 
+
+  // User delivery Address Creation function
+  async createDeliAddrs(dto: CreateUserAddressDto) {
+    return this.prisma.userAddress.create({ data: dto });
+  }
+
+
+  async getAllDeliAddrs() {
+    return this.prisma.userAddress.findMany();
+  }
+
+
+  //User Billing Address Creation functions
+  async createBillAddrs(dto: CreateBillingAddressDto) {
+    return this.prisma.billingAddress.create({ data: dto });
+  }
+
+
+  async getAllBillAddr() {
+    return this.prisma.billingAddress.findMany();
+  }
+
+  
 }
