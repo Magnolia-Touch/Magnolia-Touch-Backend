@@ -16,7 +16,6 @@ export class CreateGuestBookDto {
   @IsOptional()
   @IsString()
   photo_upload: string;
-  @IsString()
-  date: string;
+
 
 }

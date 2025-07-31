@@ -2,6 +2,7 @@ import { PrismaService } from "src/prisma/prisma.service";
 import { CreateBookingDto } from "./dto/booking.dto";
 import { Injectable, HttpStatus } from "@nestjs/common";
 import { StripeService } from "src/stripe/stripe.service";
+import { generateOrderIdforService } from "src/utils/code-generator.util";
 
 @Injectable()
 export class BookingService {
@@ -14,7 +15,8 @@ export class BookingService {
     user_Id: number,
     church_id: number,
     subscription_id: number,
-    flower_id: number
+    flower_id: number,
+    user_email: string
   ) {
     const { name_on_memorial, plot_no, date1, date2 } = bookingdto;
 
@@ -53,6 +55,7 @@ export class BookingService {
     const amount = parseInt(subscribed_plan.Price, 10)
     const booking = await this.prisma.booking.create({
       data: {
+        booking_ids: generateOrderIdforService(),
         User_id: user_Id,
         church_id,
         name_on_memorial,
@@ -68,7 +71,7 @@ export class BookingService {
         is_bought: false,
       },
     });
-    const paymentIntent = await this.stipeservice.createPaymentIntent(amount, 'usd');
+    const paymentIntent = await this.stipeservice.createPaymentIntentforService(amount, 'usd', booking.booking_ids, user_email);
 
 
     return {

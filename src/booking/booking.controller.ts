@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Query, Request, UseGuards, Post, Req } from "@nestjs/common";
+import { Body, Controller, Get, Query, Request, UseGuards, Post, Req, ParseIntPipe } from "@nestjs/common";
 import { JwtAuthGuard } from "src/common/guards/jwt-auth.guard";
 import { CreateBookingDto } from "./dto/booking.dto";
 import { BookingService } from "./booking.service";
@@ -14,16 +14,18 @@ export class BookingController{
     async createbooking(
         @Req() req,
         @Body() body: CreateBookingDto,
-        @Query() query: BookingQueryDto
+        @Query('church_id', ParseIntPipe) church_id: number, 
+        @Query('subscription_id', ParseIntPipe) subscription_id: number, 
+        @Query('flower_id', ParseIntPipe) flower_id: number
     ){
 
-        const userId = req.user.customer_id
-        console.log(userId)
+        const userId = req.user.customer_id;
+        const userEmail = req.user.email;
         return this.bookingService.createBooking(
             {
                 ...body
             },
-            userId, query.church_id, query.subscription_id, query.flower_id
+            userId, church_id, subscription_id, flower_id, userEmail
         )
     }
 }

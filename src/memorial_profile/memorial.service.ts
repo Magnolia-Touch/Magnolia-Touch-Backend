@@ -89,6 +89,207 @@ export class MemorialProfileService {
     };
   }
 
+
+  async addGuestbook(slug: string, dto: CreateGuestBookDto) {
+    const { first_name, last_name, guestemail, phone, message, photo_upload } = dto;
+    const date = new Date().toISOString(); // Get current date in ISO format
+    const profile = await this.prisma.deadPersonProfile.findUnique({
+      where: { slug },
+      include: {
+        guestBook: true,
+      },
+    });
+    if (!profile || !profile.guestBook.length) {
+      return {
+        message: 'Guestbook not found for this profile',
+        status: HttpStatus.NOT_FOUND,
+      };
+    }
+    
+    const guestbook_id = profile.guestBook[0].guestbook_id; 
+    const created = await this.prisma.guestBookItems.create({
+      data: {
+        guestbook_id: guestbook_id,
+        first_name: first_name,
+        last_name: last_name,
+        email:guestemail,
+        message: message,
+        phone:phone,
+        photo_upload: photo_upload,
+        date: date,
+        is_approved: false
+      },
+    });
+    return {
+      message: `GuestBook entry added`,
+      data: created,
+      status: HttpStatus.CREATED,
+    };
+  }
+
+
+  async getGuestBookApproved(slug: string) {
+    const profile = await this.prisma.guestBook.findFirst({
+      where: { deadPersonProfiles: slug },
+      include: {
+        guestBookItems: {
+          where: {
+            is_approved: true
+          }
+        }
+      }
+    });
+    if (!profile) {
+      return {
+        message: 'Profile not found',
+        data: null,
+        status: HttpStatus.NOT_FOUND,
+      };
+    }
+    return {
+      message: 'Profile fetched successfully',
+      data: profile,
+      status: HttpStatus.OK,
+    };
+  }
+
+  async getGuestBookUnApproved(email: string, slug: string) {
+    const profile = await this.prisma.deadPersonProfile.findUnique({
+      where: { slug }
+    });
+    
+    if (!profile) {
+      return {
+        message: 'Profile not found',
+        data: null,
+        status: HttpStatus.NOT_FOUND,
+      };
+    }
+    if (email != profile.owner_id) {
+      return {
+        message: 'You are not authorized to update this profile',
+        status: HttpStatus.FORBIDDEN,
+      };
+    }
+    const guestbook = await this.prisma.guestBook.findFirst({
+      where: { deadPersonProfiles: slug },
+      include: {
+        guestBookItems: {
+          where: {
+            is_approved: false
+          }
+        }
+      }
+    });
+    if (!guestbook) {
+      return {
+        message: 'Profile not found',
+        data: null,
+        status: HttpStatus.NOT_FOUND,
+      };
+    }
+    return {
+      message: 'Profile fetched successfully',
+      data: guestbook,
+      status: HttpStatus.OK,
+    };
+  }
+
+  async updateGuestBook(email: string, slug: string, id: number) {
+    const profile = await this.prisma.deadPersonProfile.findUnique({
+      where: { slug },
+      include: {
+        gallery: true,
+      },
+    });
+    
+    if (!profile || !profile.gallery.length) {
+      return {
+        message: 'Gallery not found for this profile',
+        status: HttpStatus.NOT_FOUND,
+      };
+    }
+    if (email != profile.owner_id) {
+      return {
+        message: 'You are not authorized to update this profile',
+        status: HttpStatus.FORBIDDEN,
+      };
+    }
+    const guestbook = await this.prisma.guestBook.findFirst({
+      where: { deadPersonProfiles: slug },
+      include: {
+        guestBookItems: true
+      }
+    });
+    if (!guestbook) {
+      return {
+        message: 'Profile not found',
+        data: null,
+        status: HttpStatus.NOT_FOUND,
+      };
+    }
+    await this.prisma.guestBookItems.update({
+      where: {
+        guestbookitems_id: id,
+        guestbook_id: guestbook.guestbook_id,
+      },
+      data: {
+        is_approved: true,
+      },
+    })
+    
+    return {
+      message: 'GuestMessage Approved Succesfully',
+      status: HttpStatus.OK,
+    };
+  }
+
+  async deleteGuestBook(email: string, slug: string, id: number) {
+    const profile = await this.prisma.deadPersonProfile.findUnique({
+      where: { slug },
+      include: {
+        gallery: true,
+      },
+    });
+    
+    if (!profile || !profile.gallery.length) {
+      return {
+        message: 'Gallery not found for this profile',
+        status: HttpStatus.NOT_FOUND,
+      };
+    }
+    if (email != profile.owner_id) {
+      return {
+        message: 'You are not authorized to update this profile',
+        status: HttpStatus.FORBIDDEN,
+      };
+    }
+    const guestbook = await this.prisma.guestBook.findFirst({
+      where: { deadPersonProfiles: slug },
+      include: {
+        guestBookItems: true
+      }
+    });
+    if (!guestbook) {
+      return {
+        message: 'Profile not found',
+        data: null,
+        status: HttpStatus.NOT_FOUND,
+      };
+    }
+    await this.prisma.guestBookItems.delete({
+      where: {
+        guestbookitems_id: id,
+        guestbook_id: guestbook.guestbook_id,
+      },
+    })
+    
+    return {
+      message: 'Profile Deleted successfully',
+      status: HttpStatus.OK,
+    };
+  }
+
   //Add family members to the profile
   async addFamilyMembers(email: string, slug: string, relation: string, dto: CreateFamilyMemberDto) {
     const { name } = dto;
@@ -502,257 +703,6 @@ export class MemorialProfileService {
     });
     return {
       message: `${mediatype} item with ID ${id} deleted successfully.`,
-      status: HttpStatus.OK,
-    };
-  }
-
-
-
-  async addGuestbook(slug: string, dto: CreateGuestBookDto) {
-    const { first_name, last_name, guestemail, phone, message, photo_upload, date } = dto;
-    const profile = await this.prisma.deadPersonProfile.findUnique({
-      where: { slug },
-      include: {
-        guestBook: true,
-      },
-    });
-    if (!profile || !profile.guestBook.length) {
-      return {
-        message: 'Guestbook not found for this profile',
-        status: HttpStatus.NOT_FOUND,
-      };
-    }
-    
-    const guestbook_id = profile.guestBook[0].guestbook_id; 
-    const created = await this.prisma.guestBookItems.create({
-      data: {
-        guestbook_id: guestbook_id,
-        first_name: first_name,
-        last_name: last_name,
-        email:guestemail,
-        message: message,
-        phone:phone,
-        photo_upload: photo_upload,
-        date: date,
-        is_approved: false
-      },
-    });
-    return {
-      message: `GuestBook entry added`,
-      data: created,
-      status: HttpStatus.CREATED,
-    };
-  }
-
-
-  async getGuestBookApproved(slug: string) {
-    const profile = await this.prisma.guestBook.findFirst({
-      where: { deadPersonProfiles: slug },
-      include: {
-        guestBookItems: {
-          where: {
-            is_approved: true
-          }
-        }
-      }
-    });
-    if (!profile) {
-      return {
-        message: 'Profile not found',
-        data: null,
-        status: HttpStatus.NOT_FOUND,
-      };
-    }
-    return {
-      message: 'Profile fetched successfully',
-      data: profile,
-      status: HttpStatus.OK,
-    };
-  }
-
-  async getGuestBookUnApproved(email: string, slug: string) {
-    const profile = await this.prisma.deadPersonProfile.findUnique({
-      where: { slug },
-      include: {
-        gallery: true,
-      },
-    });
-    
-    if (!profile || !profile.gallery.length) {
-      return {
-        message: 'Gallery not found for this profile',
-        status: HttpStatus.NOT_FOUND,
-      };
-    }
-    if (email != profile.owner_id) {
-      return {
-        message: 'You are not authorized to update this profile',
-        status: HttpStatus.FORBIDDEN,
-      };
-    }
-    const guestbook = await this.prisma.guestBook.findFirst({
-      where: { deadPersonProfiles: slug },
-      include: {
-        guestBookItems: {
-          where: {
-            is_approved: false
-          }
-        }
-      }
-    });
-    if (!guestbook) {
-      return {
-        message: 'Profile not found',
-        data: null,
-        status: HttpStatus.NOT_FOUND,
-      };
-    }
-    return {
-      message: 'Profile fetched successfully',
-      data: guestbook,
-      status: HttpStatus.OK,
-    };
-  }
-
-  async updateGuestBook(email: string, slug: string, id: number) {
-    const profile = await this.prisma.deadPersonProfile.findUnique({
-      where: { slug },
-      include: {
-        gallery: true,
-      },
-    });
-    
-    if (!profile || !profile.gallery.length) {
-      return {
-        message: 'Gallery not found for this profile',
-        status: HttpStatus.NOT_FOUND,
-      };
-    }
-    if (email != profile.owner_id) {
-      return {
-        message: 'You are not authorized to update this profile',
-        status: HttpStatus.FORBIDDEN,
-      };
-    }
-    const guestbook = await this.prisma.guestBook.findFirst({
-      where: { deadPersonProfiles: slug },
-      include: {
-        guestBookItems: true
-      }
-    });
-    if (!guestbook) {
-      return {
-        message: 'Profile not found',
-        data: null,
-        status: HttpStatus.NOT_FOUND,
-      };
-    }
-    await this.prisma.guestBookItems.update({
-      where: {
-        guestbookitems_id: id,
-        guestbook_id: guestbook.guestbook_id,
-      },
-      data: {
-        is_approved: true,
-      },
-    })
-    
-    return {
-      message: 'GuestMessage Approved Succesfully',
-      status: HttpStatus.OK,
-    };
-  }
-
-  async deleteGuestBook(email: string, slug: string, id: number) {
-    const profile = await this.prisma.deadPersonProfile.findUnique({
-      where: { slug },
-      include: {
-        gallery: true,
-      },
-    });
-    
-    if (!profile || !profile.gallery.length) {
-      return {
-        message: 'Gallery not found for this profile',
-        status: HttpStatus.NOT_FOUND,
-      };
-    }
-    if (email != profile.owner_id) {
-      return {
-        message: 'You are not authorized to update this profile',
-        status: HttpStatus.FORBIDDEN,
-      };
-    }
-    const guestbook = await this.prisma.guestBook.findFirst({
-      where: { deadPersonProfiles: slug },
-      include: {
-        guestBookItems: true
-      }
-    });
-    if (!guestbook) {
-      return {
-        message: 'Profile not found',
-        data: null,
-        status: HttpStatus.NOT_FOUND,
-      };
-    }
-    await this.prisma.guestBookItems.delete({
-      where: {
-        guestbookitems_id: id,
-        guestbook_id: guestbook.guestbook_id,
-      },
-    })
-    
-    return {
-      message: 'Profile Deleted successfully',
-      status: HttpStatus.OK,
-    };
-  }
-
-
-  async updateProfile(slug: string, email: string, dto: Partial<CreateDeadPersonProfileDto>) {
-    const memory_profile = await this.prisma.deadPersonProfile.findUnique({
-      where: {slug}
-    });
-    if (!memory_profile){
-      return{
-        message: "No Memorial Profile found",
-        data: null,
-        status: HttpStatus.NOT_FOUND
-      }
-    }
-    // 1. Find user by email
-    const user = await this.prisma.user.findUnique({
-      where: { email },
-    });
-
-    if (!user) {
-      return {
-        message: 'User not found',
-        status: HttpStatus.NOT_FOUND,
-      };
-    }
-
-    if (user.email != memory_profile.owner_id) {
-      return {
-        message: 'You are not authorized to update this profile',
-        status: HttpStatus.FORBIDDEN,
-      };
-    }
-    const updated = await this.prisma.deadPersonProfile.update({
-      where: { slug },
-      data: {
-        name: dto.name,
-        profile_image: dto.profile_image,
-        background_image: dto.background_image,
-        born_date: dto.born_date,
-        death_date: dto.death_date,
-        memorial_place: dto.memorial_place,
-      },
-    });
-    return {
-      message: 'Profile updated successfully',
-      data: updated,
       status: HttpStatus.OK,
     };
   }

@@ -24,15 +24,17 @@ export class LogicService {
     }
 
     // Example cost logic
-    const flowerCost = flower.Price;      // e.g., 500
-    const planCost = plan.Price;          // e.g., 2000
-    const cleaningCost = 100;             // e.g., flat per cleaning
+    const flowerCost = parseInt(flower.Price, 10);  // '500' => 500
+    const planCost = parseInt(plan.Price, 10);      // '2000' => 2000
+           // e.g., flat per cleaning
+    console.log('💐 Flower Price:', flower.Price, 'Type:', typeof flower.Price);
+    console.log('📦 Plan Price:', plan.Price, 'Type:', typeof plan.Price);
 
-    const cleanings = [firstCleaningDate, nextCleaningDate].filter(Boolean).length;
-    const anniversaryCharge = anniversaryDate ? 300 : 0;
+
+
     const nameOnBouquetCharge = nameOnBouquet ? 50 : 0;
 
-    const total = flowerCost + planCost + cleaningCost * cleanings + anniversaryCharge + nameOnBouquetCharge;
+    const total = flowerCost + planCost + nameOnBouquetCharge;
 
     return {
     message: 'Cost estimated successfully',

@@ -24,6 +24,7 @@ export class MemorialController {
     return this.deadPersonProfileService.create(dto, email);
   }
 
+  
   @Get('by-code')
   async getBySlug(@Query('code') slug: string) {
     return this.deadPersonProfileService.getProfile(slug);
@@ -68,11 +69,6 @@ export class MemorialController {
   }
 
 
-  @Get('by-code-family')
-  async getFamily(@Query('code') slug: string) {
-    return this.deadPersonProfileService.getFamily(slug);
-  }
-
   @UseGuards(JwtAuthGuard)
   @Post('add-family-member')
   async addFamilyMember(
@@ -85,8 +81,13 @@ export class MemorialController {
     return this.deadPersonProfileService.addFamilyMembers(email, slug, relation, body);
   }
 
+  @Get('by-code-family')
+  async getFamily(@Query('code') slug: string) {
+    return this.deadPersonProfileService.getFamily(slug);
+  }
 
-  @Get('get-family-by-id/:id')
+
+  @Get('get-family-by')
   async getFamilyById(
     @Req() req,
     @Query('code') slug: string,
@@ -141,7 +142,7 @@ export class MemorialController {
   }
   
   @UseGuards(JwtAuthGuard)
-  @Post('add-media')
+  @Delete('delete-media')
   async deleteGalleryItems(
     @Req() req,
     @Query('code') slug: string,
@@ -151,9 +152,6 @@ export class MemorialController {
     const email = req.user.email;
     return this.deadPersonProfileService.deleteGalleryItems(email, slug, relation, id);
   }
-
-
-
   
 }
 

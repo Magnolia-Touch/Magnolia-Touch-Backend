@@ -32,4 +32,24 @@ export class SubscriptionService {
       status: HttpStatus.OK,
     };
   }
+
+  async findOne(id: number) {
+    const subscription = await this.prisma.subscriptionPlan.findUnique({
+      where: { Subscription_id: id },
+    });
+
+    if (!subscription) {
+      return {
+        message: 'Subscription plan not found',
+        data: null,
+        status: HttpStatus.NOT_FOUND,
+      };
+    }
+
+    return {
+      message: 'Subscription plan fetched successfully',
+      data: subscription,
+      status: HttpStatus.OK,
+    };
+  }
 }

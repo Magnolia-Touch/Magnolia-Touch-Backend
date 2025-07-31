@@ -34,6 +34,7 @@ model User {
   BillingAddress     BillingAddress[]
   Cart               Cart[]
   deadPersonProfiles DeadPersonProfile[]
+  OrderItems         OrderItems[]
 }
 
 model UserAddress {
@@ -73,9 +74,10 @@ model Products {
   company_guarantee    String?
   order_ids            Int?
 
-  Dimensions ProductDimension[]
-  orders     Orders?            @relation(fields: [order_ids], references: [Order_id])
-  CartItem   CartItem[]
+  Dimensions      ProductDimension[]
+  orders          Orders?            @relation(fields: [order_ids], references: [Order_id])
+  CartItem        CartItem[]
+  OrderedProducts OrderedProducts[]
 }
 
 model Services {
@@ -107,34 +109,35 @@ model CartItem {
 }
 
 model Orders {
-  Order_id         Int     @id @default(autoincrement())
-  User_id          Int @unique
-  
-  user             User    @relation(fields: [User_id], references: [customer_id])
+  Order_id Int @id @default(autoincrement())
+  User_id  Int @unique
+
+  user     User       @relation(fields: [User_id], references: [customer_id])
+  Products Products[]
+}
+
+model OrderedProducts {
+  orderedproduct_id Int @id @default(autoincrement())
+  order_item_id     Int
+  product_id        Int
+
+  product   Products   @relation(fields: [product_id], references: [product_id])
+  orderItem OrderItems @relation(fields: [order_item_id], references: [id])
 }
 
 model OrderItems {
-  orderitem_id Int @id @default(autoincrement())
+  id               Int     @id @default(autoincrement())
+  order_id         String  @unique
   User_id          Int
-  order_id Int @unique
-  Order_Status     String
+  parent_order_id  Int     @unique
+  Order_Status     String?
   Total_Amount     Float
   Payment_Details  String
-  Tracking_Details String
+  Tracking_Details String?
   is_paid          Boolean @default(false)
 
   orderedProducts OrderedProducts[]
-  user             User    @relation(fields: [User_id], references: [customer_id])
-}
-
-OrderedProducts {
-  orderedproduct_id @id @default(autoincrement())
-  order_item Int
-  product_id Int
-
-  product_id  Products  @relation(fields: [product_id], references: [product_id])
-  order_item             OrderItems    @relation(fields: [order_item], references: [order_id])
-
+  user            User              @relation(fields: [User_id], references: [customer_id])
 }
 
 model ProductDimension {
@@ -175,7 +178,8 @@ model Church {
 }
 
 model Booking {
-  booking_id         Int       @id @default(autoincrement())
+  id                 Int       @id @default(autoincrement())
+  booking_ids        String    @unique
   name_on_memorial   String
   plot_no            String?
   User_id            Int

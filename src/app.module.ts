@@ -15,6 +15,7 @@ import { CartModule } from './cart/cart.module';
 import { QrModule } from './qr_generator/qr.module';
 import { MemorialProfileModule } from './memorial_profile/memorial.module';
 import { ServicesModule } from './services/services.module';
+import { LogicModule } from './logics/logics.module';
 
 @Module({
   imports: [ConfigModule.forRoot({
@@ -33,6 +34,7 @@ import { ServicesModule } from './services/services.module';
     MemorialProfileModule,
     QrModule,
     ServicesModule,
+    LogicModule,
     StripeModule.forRootAsync()], 
   controllers: [AppController],
   providers: [AppService],

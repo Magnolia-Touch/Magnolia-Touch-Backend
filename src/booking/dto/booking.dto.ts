@@ -1,9 +1,6 @@
 import { IsBoolean, IsDate, IsInt, IsOptional, IsString } from 'class-validator';
 
 export class CreateBookingDto {
-  @IsInt()
-  User_id: number;
-
   @IsString()
   name_on_memorial: string;
 
@@ -20,5 +17,5 @@ export class CreateBookingDto {
   @IsOptional()
   @IsString()
   next_cleaning_date?: Date;
-
+// convert this to anniversary date
 }
