@@ -32,4 +32,25 @@ export class FlowersService {
       status: HttpStatus.OK,
     };
   }
+
+  async updateStock(flower_id: number, is_stock: boolean) {
+    const flower = await this.prisma.flowers.findUnique({ where: { flower_id } })
+    if (!flower){
+      return {
+      message: 'No Flowers Found',
+      data: null,
+      status: HttpStatus.NOT_FOUND,
+    };
+    }
+    
+    await this.prisma.flowers.update({
+      where: { flower_id },
+      data: { in_stock: is_stock }
+    })
+    return {
+    message: 'Flower stock updated successfully',
+    data: null,
+    status: HttpStatus.OK,
+    }
+  }
 }

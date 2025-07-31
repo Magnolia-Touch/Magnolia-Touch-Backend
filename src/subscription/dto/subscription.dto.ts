@@ -1,11 +1,12 @@
 import { IsInt, IsString } from 'class-validator';
 
 export class SubscriptionDto {
-  @IsString()
-  Service_Name: string;
 
   @IsString()
   Subscription_name: string;
+
+  @IsString()
+  discription: string;
 
   @IsInt()
   Frequency: number;

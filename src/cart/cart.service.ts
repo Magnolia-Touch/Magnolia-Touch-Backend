@@ -1,6 +1,6 @@
 
 // cart.service.ts
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
@@ -40,7 +40,6 @@ export class CartService {
         },
       });
     }
-
     const updatedItems = await this.prisma.cartItem.findMany({ where: { cartId: cart.cartId } });
     const totalAmount = updatedItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
@@ -49,8 +48,9 @@ export class CartService {
       data: { total_amount: totalAmount.toString() },
     });
 
-    return { message: 'Product added to cart successfully' };
+    return { message: 'Product added to cart successfully', status: HttpStatus.CREATED };
   }
+  
 
   async getCart(userId: number) {
     const cart = await this.prisma.cart.findFirst({

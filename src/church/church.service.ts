@@ -31,6 +31,7 @@ export class ChurchService {
   }
 
   async findById(id: number) {
+    console.log(`Fetching church with ID: ${id}`);
     const church = await this.prisma.church.findUnique({
       where: { church_id: id },
     });

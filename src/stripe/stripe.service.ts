@@ -19,6 +19,9 @@ export class StripeService {
   async createPaymentIntent(
     amount: number,
     currency: string,
+    productId?: number,
+    customerId?: string,
+    
   ): Promise<Stripe.PaymentIntent> {
     try {
       const paymentIntent = await this.stripe.paymentIntents.create({

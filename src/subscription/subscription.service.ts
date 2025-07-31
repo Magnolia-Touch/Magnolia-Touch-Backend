@@ -9,7 +9,7 @@ export class SubscriptionService {
   async create(dto: SubscriptionDto) {
     const created = await this.prisma.subscriptionPlan.create({
       data: {
-        Service_Name: dto.Service_Name,
+        discription: dto.discription,
         Subscription_name: dto.Subscription_name,
         Frequency: dto.Frequency,
         Price: dto.Price,

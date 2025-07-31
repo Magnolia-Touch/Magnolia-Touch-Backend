@@ -12,6 +12,9 @@ import { StripeModule } from './stripe/stripe.module';
 import { ConfigModule } from '@nestjs/config';
 import { ProductsModule } from './products/products.module';
 import { CartModule } from './cart/cart.module';
+import { QrModule } from './qr_generator/qr.module';
+import { MemorialProfileModule } from './memorial_profile/memorial.module';
+import { ServicesModule } from './services/services.module';
 
 @Module({
   imports: [ConfigModule.forRoot({
@@ -27,6 +30,9 @@ import { CartModule } from './cart/cart.module';
     FlowersModule, 
     CartModule, 
     ProductsModule, 
+    MemorialProfileModule,
+    QrModule,
+    ServicesModule,
     StripeModule.forRootAsync()], 
   controllers: [AppController],
   providers: [AppService],

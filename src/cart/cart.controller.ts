@@ -37,5 +37,4 @@ export class CartController {
   async clearCart(@Request() req) {
     return this.cartService.clearCart(req.user.customer_id);
   }
-  
 }

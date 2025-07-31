@@ -1,7 +1,8 @@
-import { Controller, Post, HttpCode, HttpStatus, Headers, Req } from '@nestjs/common';
+import { Controller, Post, HttpCode, HttpStatus, Headers, Req, Body } from '@nestjs/common';
 import Stripe from 'stripe';
 import { Request } from 'express'; // Important: must be express.Request
 import * as dotenv from 'dotenv'
+import { StripeService } from './stripe.service';
 dotenv.config()
 
 const stripe = new Stripe(process.env.STRIPE_API_KEY!, {
@@ -10,6 +11,15 @@ const stripe = new Stripe(process.env.STRIPE_API_KEY!, {
 
 @Controller('stripe')
 export class StripeController {
+  constructor(private readonly stripeService: StripeService) {}
+
+  @Post('create-payment-intent')
+  async createPaymentIntent(@Body() body: { amount: number; currency: string }) {
+    const { amount, currency } = body;
+    
+    return this.stripeService.createPaymentIntent(amount, currency);
+  }
+
   @Post('webhook')
   @HttpCode(HttpStatus.OK)
   async handleWebhook(

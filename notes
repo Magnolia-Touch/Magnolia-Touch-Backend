@@ -1,0 +1,60 @@
+get and create of services --done
+get and create of SubscriptionPlan --done
+
+
+a logic function to calculate estimate, -- done
+cemetry name
+city or state
+choosen plan 
+first cleaning date, 
+next cleaning date
+anniversery date
+flower selection
+note on bouquet
+
+
+user profile- done
+name,
+email, 
+phone
+address
+booked cleaning services - edit and delete
+    -- plan name string
+    -- flower included bool
+    -- cemtery name (person) - string
+    -- church name - string
+    -- next service date - date
+    -- is_active - boolean
+memories created
+    -- bornyear - death year - string
+    -- born date date
+    -- death date date 
+    -- location
+    -- views
+    -- comments
+    -- share 
+    -- qr image
+
+
+list all dead person profile
+    -- bornyear - death year - string
+    -- born date date
+    -- death date date 
+    -- location
+    -- views
+    -- comments
+    -- share 
+    -- qr image
+
+today
+add evey api on postman.
+likes, count and view counter.
+
+
+
+
+buy now api
+product id 
+
+
+memorial profile checking

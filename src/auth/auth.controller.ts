@@ -21,7 +21,7 @@ export class AuthController {
   @Roles('ADMIN')
   @Post('adminregister')
   adminregister(@Body() registerdto: RegisterDto) {
-    return this.authservice.register(registerdto);
+    return this.authservice.adminregister(registerdto);
   }
 
 
@@ -38,8 +38,8 @@ export class AuthController {
 
 
   // ✅ GET all users (admin-level access)
+  @UseGuards(JwtAuthGuard) // optional: protect route
   @Get('users')
-  //@UseGuards(JwtAuthGuard) // optional: protect route
   getAllUsers() {
     return this.authservice.getAllUsers();
   }
@@ -47,7 +47,7 @@ export class AuthController {
 
   // ✅ GET current logged-in user
   @Get('me')
-  //@UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard)
   getMe(@Request() req) {
     return req.user; // populated by JwtStrategy
   }

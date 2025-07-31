@@ -8,8 +8,8 @@ import { UseGuards } from '@nestjs/common';
 import { Roles } from 'src/common/decoraters/roles.decorator';
 
 
-// @UseGuards(JwtAuthGuard, RolesGuard)
-// @Roles('ADMIN')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('ADMIN')
 @Controller('subscription')
 export class SubscriptionController {
   constructor(private readonly subscriptionService: SubscriptionService) {}
