@@ -37,11 +37,7 @@ export class ChurchService {
     });
 
     if (!church) {
-      return {
-        message: 'Church not found',
-        data: null,
-        status: HttpStatus.NOT_FOUND,
-      };
+      throw new NotFoundException('Church not found');
     }
 
     return {

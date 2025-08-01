@@ -1,6 +1,7 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { SubscriptionDto } from './dto/subscription.dto';
+import { NotFoundException, BadRequestException } from '@nestjs/common';
 
 @Injectable()
 export class SubscriptionService {
@@ -39,11 +40,7 @@ export class SubscriptionService {
     });
 
     if (!subscription) {
-      return {
-        message: 'Subscription plan not found',
-        data: null,
-        status: HttpStatus.NOT_FOUND,
-      };
+      throw new NotFoundException('Subscription plan not found');
     }
 
     return {

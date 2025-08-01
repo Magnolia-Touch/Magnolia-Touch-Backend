@@ -1,10 +1,11 @@
-import { Injectable, UnauthorizedException, HttpStatus } from '@nestjs/common';
+import { Injectable, UnauthorizedException, HttpStatus, ConflictException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { UserService } from 'src/user/user.service';
 import { Role } from '@prisma/client';
 import { RegisterDto } from './dto/register.dto';
+import { PaginationQueryDto } from 'src/common/dto/paginationquery.dto';
 
 @Injectable()
 export class AuthService {
@@ -19,11 +20,7 @@ export class AuthService {
         const existingUser = await this.prisma.user.findUnique({ where: { email } });
 
         if (existingUser) {
-            return {
-                message: "User already exists",
-                data: null,
-                status: HttpStatus.CONFLICT
-            };
+            throw new ConflictException('User already exists');
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
@@ -64,11 +61,7 @@ export class AuthService {
         const existingUser = await this.prisma.user.findUnique({ where: { email } });
 
         if (existingUser) {
-            return {
-                message: "User already exists",
-                data: null,
-                status: HttpStatus.CONFLICT
-            };
+            throw new ConflictException('User already exists');
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
@@ -115,11 +108,7 @@ export class AuthService {
         });
 
         if (!user || !(await bcrypt.compare(password, user.password))) {
-            return {
-                message: 'Invalid credentials',
-                data: null,
-                status: HttpStatus.UNAUTHORIZED,
-            };
+            throw new UnauthorizedException('Invalid credentials');
         }
 
         const token = this.jwtService.sign({
@@ -153,14 +142,26 @@ export class AuthService {
         };
     }
 
-    async getAllUsers() {
-        const users = await this.prisma.user.findMany();
-        return {
-            message: 'All users fetched successfully',
-            data: users,
-            status: HttpStatus.OK,
-        };
+
+   async getAllUsers(query: PaginationQueryDto = { page: 1, limit: 10 }) {
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const [users, total] = await this.prisma.$transaction([
+        this.prisma.user.findMany({ skip, take: limit }),
+        this.prisma.user.count(),
+    ]);
+
+    return {
+        data: users,
+        total,
+        page,
+        lastPage: Math.ceil(total / limit),
+    };
     }
+
+
 
     async getUserById(id: number) {
         const user = await this.prisma.user.findUnique({
@@ -169,14 +170,74 @@ export class AuthService {
 
         if (!user) {
             return {
-                message: 'User not found',
-                data: null,
-                status: HttpStatus.NOT_FOUND,
+                throw: new UnauthorizedException('User not found'),
             };
         }
 
         return {
             message: 'User fetched successfully',
+            data: user,
+            status: HttpStatus.OK,
+        };
+    }
+
+    async userProfile(userId: number) {
+        const user = await this.prisma.user.findUnique({
+            where: { customer_id: userId },
+            select:{
+                customer_name: true,
+                email: true,
+                Phone: true,
+                Booking: {
+                    select: {
+                    booking_ids: true,
+                    name_on_memorial: true,
+                    plot_no: true,
+                    amount: true,
+                    date1: true,
+                    date2: true,
+                    booking_date: true,
+                    next_cleaning_date: true,
+                    status: true,
+                    Church: {
+                        select: {
+                        church_name: true,
+                        },
+                    },
+                    flower: {
+                        select: {
+                            Name: true
+                        }
+                    },
+                    subscription: {
+                        select: {
+                            Subscription_name: true,
+                            Price: true,
+                        
+                        }
+                    }
+
+                }
+            },
+            deadPersonProfiles: {
+                select: {
+                    name: true,
+    
+                    profile_image: true,
+                    born_date: true,
+                    death_date: true,
+                    memorial_place: true,
+                }
+            }
+        }
+        });
+
+        if (!user) {
+            throw new UnauthorizedException('User not found');
+        }
+
+        return {
+            message: 'User profile fetched successfully',
             data: user,
             status: HttpStatus.OK,
         };

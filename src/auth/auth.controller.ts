@@ -1,10 +1,10 @@
-import { Controller, Post, Get, Body, Param, UseGuards, Request } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, UseGuards, Request, Query } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { RolesGuard } from 'src/common/decoraters/roles.guard';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard'
 import { Roles } from 'src/common/decoraters/roles.decorator';
-
+import { PaginationQueryDto } from 'src/common/dto/paginationquery.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -38,28 +38,19 @@ export class AuthController {
 
 
   // ✅ GET all users (admin-level access)
-  @UseGuards(JwtAuthGuard) // optional: protect route
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
   @Get('users')
-  getAllUsers() {
-    return this.authservice.getAllUsers();
+  getAllUsers(@Query() query: PaginationQueryDto) {
+    return this.authservice.getAllUsers(query);
   }
 
-
-  // ✅ GET current logged-in user
-  @Get('me')
   @UseGuards(JwtAuthGuard)
-  getMe(@Request() req) {
-    return req.user; // populated by JwtStrategy
+  @Get('profile')
+  getProfile(@Request() req) {
+    const customer_id = req.user.customer_id;
+    return this.authservice.userProfile(customer_id);
   }
-
-
-  // ✅ GET user by ID
-  @Get('users/:id')
-  //@UseGuards(JwtAuthGuard)
-  getUserById(@Param('id') id: string) {
-    return this.authservice.getUserById(Number(id));
-  }
-
   
 }
 

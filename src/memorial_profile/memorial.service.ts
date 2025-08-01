@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateDeadPersonProfileDto } from './dto/memorial_profile.dto';
 import { CreateFamilyMemberDto} from './dto/create-family.dto';
@@ -18,11 +18,7 @@ export class MemorialProfileService {
     });
 
     if (!user) {
-       return {
-            message: '"User Not found',
-            data: null,
-            status: HttpStatus.NOT_FOUND,
-        };
+       throw new NotFoundException('User not found');
     }
     let uniqueSlug = '';
     let isUnique = false;
@@ -75,11 +71,7 @@ export class MemorialProfileService {
     });
 
     if (!profile) {
-      return {
-        message: 'Profile not found',
-        data: null,
-        status: HttpStatus.NOT_FOUND,
-      };
+      throw new NotFoundException('Profile not found');
     }
 
     return {
@@ -100,10 +92,7 @@ export class MemorialProfileService {
       },
     });
     if (!profile || !profile.guestBook.length) {
-      return {
-        message: 'Guestbook not found for this profile',
-        status: HttpStatus.NOT_FOUND,
-      };
+      throw new NotFoundException('Guestbook not found for this profile');
     }
     
     const guestbook_id = profile.guestBook[0].guestbook_id; 
@@ -140,11 +129,7 @@ export class MemorialProfileService {
       }
     });
     if (!profile) {
-      return {
-        message: 'Profile not found',
-        data: null,
-        status: HttpStatus.NOT_FOUND,
-      };
+      throw new NotFoundException('Profile not found');
     }
     return {
       message: 'Profile fetched successfully',
@@ -159,17 +144,10 @@ export class MemorialProfileService {
     });
     
     if (!profile) {
-      return {
-        message: 'Profile not found',
-        data: null,
-        status: HttpStatus.NOT_FOUND,
-      };
+      throw new NotFoundException('Profile not found');
     }
     if (email != profile.owner_id) {
-      return {
-        message: 'You are not authorized to update this profile',
-        status: HttpStatus.FORBIDDEN,
-      };
+      throw new ForbiddenException('You are not authorized to view this guestbook');
     }
     const guestbook = await this.prisma.guestBook.findFirst({
       where: { deadPersonProfiles: slug },
@@ -182,11 +160,7 @@ export class MemorialProfileService {
       }
     });
     if (!guestbook) {
-      return {
-        message: 'Profile not found',
-        data: null,
-        status: HttpStatus.NOT_FOUND,
-      };
+      throw new NotFoundException('Guestbook not found for this profile');
     }
     return {
       message: 'Profile fetched successfully',
@@ -204,16 +178,10 @@ export class MemorialProfileService {
     });
     
     if (!profile || !profile.gallery.length) {
-      return {
-        message: 'Gallery not found for this profile',
-        status: HttpStatus.NOT_FOUND,
-      };
+      throw new NotFoundException('Gallery not found for this profile');
     }
     if (email != profile.owner_id) {
-      return {
-        message: 'You are not authorized to update this profile',
-        status: HttpStatus.FORBIDDEN,
-      };
+      throw new ForbiddenException('You are not authorized to view this guestbook');
     }
     const guestbook = await this.prisma.guestBook.findFirst({
       where: { deadPersonProfiles: slug },
@@ -222,11 +190,7 @@ export class MemorialProfileService {
       }
     });
     if (!guestbook) {
-      return {
-        message: 'Profile not found',
-        data: null,
-        status: HttpStatus.NOT_FOUND,
-      };
+      throw new NotFoundException('Guestbook not found for this profile');
     }
     await this.prisma.guestBookItems.update({
       where: {
@@ -253,16 +217,10 @@ export class MemorialProfileService {
     });
     
     if (!profile || !profile.gallery.length) {
-      return {
-        message: 'Gallery not found for this profile',
-        status: HttpStatus.NOT_FOUND,
-      };
+      throw new NotFoundException('Gallery not found for this profile');
     }
     if (email != profile.owner_id) {
-      return {
-        message: 'You are not authorized to update this profile',
-        status: HttpStatus.FORBIDDEN,
-      };
+      throw new ForbiddenException('You are not authorized to view this guestbook');
     }
     const guestbook = await this.prisma.guestBook.findFirst({
       where: { deadPersonProfiles: slug },
@@ -271,11 +229,7 @@ export class MemorialProfileService {
       }
     });
     if (!guestbook) {
-      return {
-        message: 'Profile not found',
-        data: null,
-        status: HttpStatus.NOT_FOUND,
-      };
+      throw new NotFoundException('Guestbook not found for this profile');
     }
     await this.prisma.guestBookItems.delete({
       where: {
@@ -300,16 +254,10 @@ export class MemorialProfileService {
       },
     });
     if (!profile || !profile.family.length) {
-      return {
-        message: 'Family not found for this profile',
-        status: HttpStatus.NOT_FOUND,
-      };
+      throw new NotFoundException('Family not found for this profile');
     }
     if (email != profile.owner_id) {
-      return {
-        message: 'You are not authorized to update this profile',
-        status: HttpStatus.FORBIDDEN,
-      };
+      throw new ForbiddenException('You are not authorized to view this guestbook');
     }
     const family_id = profile.family[0].family_id; // assuming one-to-one family
     // Validate relation to prevent arbitrary table access
@@ -319,10 +267,7 @@ export class MemorialProfileService {
       'grandchildrens', 'grandparents', 'greatGrandParents',
     ];
     if (!validRelations.includes(relation)) {
-      return {
-        message: `Invalid relation: ${relation}`,
-        status: HttpStatus.BAD_REQUEST,
-      };
+      throw new BadRequestException(`Invalid relation: ${relation}`);
     }
     // Construct Prisma model name dynamically (capitalize first letter)
     const model = {
@@ -377,11 +322,7 @@ export class MemorialProfileService {
     });
 
     if (!profile) {
-      return {
-        message: 'Profile not found',
-        data: null,
-        status: HttpStatus.NOT_FOUND,
-      };
+      throw new NotFoundException('Profile not found');
     }
 
     return {
@@ -421,27 +362,15 @@ export class MemorialProfileService {
       },
     });
     if (!family) {
-      return {
-        message: 'Family not found for this profile',
-        data: null,
-        status: HttpStatus.NOT_FOUND,
-      };
+      throw new NotFoundException('Family not found for this profile');
     }
     const members = family[relation] as any[];
     if (!members || !Array.isArray(members)) {
-      return {
-        message: `No members found for relation: ${relation}`,
-        data: null,
-        status: HttpStatus.NOT_FOUND,
-      };
+      throw new NotFoundException(`No ${relation} members found for this profile`);
     }
     const member = members.find((m) => m.id === id);
     if (!member) {
-      return {
-        message: `No ${relation} member found with ID ${id}`,
-        data: null,
-        status: HttpStatus.NOT_FOUND,
-      };
+      throw new NotFoundException(`${relation.charAt(0).toUpperCase() + relation.slice(1)} member with ID ${id} not found`);
     }
     return {
       message: 'Family member fetched successfully',
@@ -457,17 +386,10 @@ export class MemorialProfileService {
       where: { slug }
     });
     if (!profile) {
-      return {
-        message: 'Profile not found',
-        data: null,
-        status: HttpStatus.NOT_FOUND,
-      };
+      throw new NotFoundException('Profile not found');
     }
     if (email != profile.owner_id) {
-      return {
-        message: 'You are not authorized to update this profile',
-        status: HttpStatus.FORBIDDEN,
-      };
+      throw new ForbiddenException('You are not authorized to view this guestbook');
     }
     const family = await this.prisma.family.findFirst({
       where: { deadPersonProfiles: slug },
@@ -512,28 +434,17 @@ export class MemorialProfileService {
       where: { slug }
     });
     if (!profile) {
-      return {
-        message: 'Profile not found',
-        data: null,
-        status: HttpStatus.NOT_FOUND,
-      };
+      throw new NotFoundException('Profile not found');
     }
     if (email != profile.owner_id) {
-      return {
-        message: 'You are not authorized to update this profile',
-        status: HttpStatus.FORBIDDEN,
-      };
+      throw new ForbiddenException('You are not authorized to view this guestbook');
     }
     // 1. Find the family using the slug
     const family = await this.prisma.family.findFirst({
       where: { deadPersonProfiles: slug },
     });
     if (!family) {
-     return {
-      message: "Family Not Found",
-      data: null,
-      status: HttpStatus.NOT_FOUND
-     }
+     throw new NotFoundException('Family not found for the provided slug');
       
     }
     const relationMap: Record<string, string> = {
@@ -572,16 +483,10 @@ export class MemorialProfileService {
       },
     });
     if (!profile || !profile.gallery.length) {
-      return {
-        message: 'Gallery not found for this profile',
-        status: HttpStatus.NOT_FOUND,
-      };
+      throw new NotFoundException('Gallery not found for this profile');
     }
     if (email != profile.owner_id) {
-      return {
-        message: 'You are not authorized to update this profile',
-        status: HttpStatus.FORBIDDEN,
-      };
+      throw new ForbiddenException('You are not authorized to view this guestbook');
     }
     const gallery_id = profile.gallery[0].gallery_id; // assuming one-to-one family
     // Validate relation to prevent arbitrary table access
@@ -589,10 +494,7 @@ export class MemorialProfileService {
       'links', 'photos', 'videos'
     ];
     if (!validRelations.includes(mediatype)) {
-      return {
-        message: `Invalid Mediatype: ${mediatype}`,
-        status: HttpStatus.BAD_REQUEST,
-      };
+      throw new BadRequestException(`Invalid Mediatype: ${mediatype}`);
     }
     // Construct Prisma model name dynamically (capitalize first letter)
     const model = {
@@ -633,11 +535,7 @@ export class MemorialProfileService {
     });
 
     if (!profile) {
-      return {
-        message: 'Profile not found',
-        data: null,
-        status: HttpStatus.NOT_FOUND,
-      };
+      throw new NotFoundException('Profile not found');
     }
 
     return {
@@ -658,24 +556,15 @@ export class MemorialProfileService {
       include: { gallery: true },
     });
     if (!profile || !profile.gallery.length) {
-      return {
-        message: 'Gallery not found for this profile',
-        status: HttpStatus.NOT_FOUND,
-      };
+      throw new NotFoundException('Gallery not found for this profile');
     }
     if (email !== profile.owner_id) {
-      return {
-        message: 'You are not authorized to update this profile',
-        status: HttpStatus.FORBIDDEN,
-      };
+      throw new ForbiddenException('You are not authorized to view this guestbook');
     }
     const gallery_id = profile.gallery[0].gallery_id;
     const validmedia = ['links', 'photos', 'videos'];
     if (!validmedia.includes(mediatype.toLowerCase())) {
-      return {
-        message: `Invalid Mediatype: ${mediatype}`,
-        status: HttpStatus.BAD_REQUEST,
-      };
+      throw new BadRequestException(`Invalid Mediatype: ${mediatype}`);
     }
     const mediaMap: Record<string, string> = {
       photos: 'photos',
@@ -690,10 +579,7 @@ export class MemorialProfileService {
     const modelName = mediaMap[mediatype.toLowerCase()];
     const idField = idFieldsMap[modelName];
     if (!modelName || !idField) {
-      return {
-        message: `Invalid or unsupported media type`,
-        status: HttpStatus.BAD_REQUEST,
-      };
+      throw new BadRequestException(`Invalid Mediatype: ${mediatype}`);
     }
     await this.prisma[modelName].delete({
       where: {

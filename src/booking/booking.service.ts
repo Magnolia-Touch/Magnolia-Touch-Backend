@@ -26,31 +26,19 @@ export class BookingService {
 
     const church = await this.prisma.church.findUnique({ where: { church_id } });
     if (!church) {
-      return {
-        message: 'Church not found',
-        data: null,
-        status: HttpStatus.NOT_FOUND,
-      };
+      throw new Error('Church not found');
     }
 
     const subscribed_plan = await this.prisma.subscriptionPlan.findUnique({
       where: { Subscription_id: subscription_id },
     });
     if (!subscribed_plan) {
-      return {
-        message: 'Subscription plan not found',
-        data: null,
-        status: HttpStatus.NOT_FOUND,
-      };
+      throw new Error('Subscription plan not found');
     }
 
     const flower = await this.prisma.flowers.findUnique({ where: { flower_id } });
     if (!flower) {
-      return {
-        message: 'Flower not found',
-        data: null,
-        status: HttpStatus.NOT_FOUND,
-      };
+      throw new Error('Flower not found');
     }
     const amount = parseInt(subscribed_plan.Price, 10)
     const booking = await this.prisma.booking.create({

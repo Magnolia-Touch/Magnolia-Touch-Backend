@@ -1,4 +1,4 @@
-import { Injectable, HttpStatus } from '@nestjs/common';
+import { Injectable, HttpStatus, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateFlowerDto } from './dto/createflower.dto';
 
@@ -36,11 +36,7 @@ export class FlowersService {
   async updateStock(flower_id: number, is_stock: boolean) {
     const flower = await this.prisma.flowers.findUnique({ where: { flower_id } })
     if (!flower){
-      return {
-      message: 'No Flowers Found',
-      data: null,
-      status: HttpStatus.NOT_FOUND,
-    };
+      throw new NotFoundException('Flower not found');
     }
     
     await this.prisma.flowers.update({
