@@ -18,7 +18,6 @@ export class BookingController{
         @Query('subscription_id', ParseIntPipe) subscription_id: number, 
         @Query('flower_id', ParseIntPipe) flower_id: number
     ){
-
         const userId = req.user.customer_id;
         const userEmail = req.user.email;
         return this.bookingService.createBooking(

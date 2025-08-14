@@ -9,8 +9,8 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db" // Creates a database file in your project
+  provider = "mysql"
+  url      = env("DATABASE_URL")
 }
 
 enum Role {
