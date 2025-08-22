@@ -18,11 +18,11 @@ export class BookingService {
     flower_id: number,
     user_email: string
   ) {
-    const { name_on_memorial, plot_no, date1, date2 } = bookingdto;
+    const { name_on_memorial, plot_no, first_cleaning_date, second_cleaning_date, anniversary_date, no_of_subsribe_years } = bookingdto;
 
-    const parsedDate1 = new Date(date1);
-    const parsedDate2 = date2 ? new Date(date2) : null;
-    const next_cleaning_date = new Date(date1);
+    const first_date = new Date(first_cleaning_date);
+    const second_date = second_cleaning_date ? new Date(second_cleaning_date) : null;
+    const death_anniversary_date = anniversary_date ? new Date(anniversary_date) : null;
 
     const church = await this.prisma.church.findUnique({ where: { church_id } });
     if (!church) {
@@ -50,11 +50,12 @@ export class BookingService {
         plot_no,
         Subscription_id: subscription_id,
         amount: amount,
-        date1: parsedDate1,
-        date2: parsedDate2,
+        first_cleaning_date: first_date,
+        second_cleaning_date: second_date,
         Flower_id: flower_id,
         booking_date: new Date(),
-        next_cleaning_date,
+        anniversary_date: death_anniversary_date,
+        no_of_subscription_years: no_of_subsribe_years ?? 0,
         status: 'CONFIRMED',
         is_bought: false,
       },
@@ -71,4 +72,8 @@ export class BookingService {
       status: HttpStatus.OK,
     };
   }
+
+  // ##need to connect stripe webhook to confirm payment and thereafter booking
 }
+
+

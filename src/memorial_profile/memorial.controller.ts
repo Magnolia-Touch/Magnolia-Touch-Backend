@@ -1,6 +1,5 @@
 
-import { Controller, Post, Body, Query, Get, Patch, Req, Param, ParseIntPipe, Delete, UseInterceptors, UploadedFile, UploadedFiles } from '@nestjs/common';
-import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
+import { Controller, Post, Body, Query, Get, Patch, Req, Param, ParseIntPipe, Delete } from '@nestjs/common';
 import { MemorialProfileService } from './memorial.service';
 import { CreateDeadPersonProfileDto } from './dto/memorial_profile.dto';
 import { CreateFamilyMemberDto } from './dto/create-family.dto';
@@ -26,7 +25,7 @@ export class MemorialController {
   }
 
   
-  @Get('by-code')
+  @Get('')
   async getBySlug(@Query('code') slug: string) {
     return this.deadPersonProfileService.getProfile(slug);
   }
@@ -124,55 +123,6 @@ export class MemorialController {
     return this.deadPersonProfileService.deleteFamilybyId(email, slug, relation, id);
   }
 
-  // New file upload endpoints using S3
-  @UseGuards(JwtAuthGuard)
-  @Post('upload-profile-image')
-  @UseInterceptors(FileInterceptor('file'))
-  async uploadProfileImage(
-    @Req() req,
-    @Query('code') slug: string,
-    @Query('type') type: 'profile' | 'background',
-    @UploadedFile() file: Express.Multer.File
-  ) {
-    const email = req.user.email;
-    return this.deadPersonProfileService.uploadProfileImage(email, slug, type, file);
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Post('upload-media')
-  @UseInterceptors(FileInterceptor('file'))
-  async uploadMedia(
-    @Req() req,
-    @Query('code') slug: string,
-    @Query('mediatype') mediatype: string,
-    @UploadedFile() file: Express.Multer.File
-  ) {
-    const email = req.user.email;
-    return this.deadPersonProfileService.uploadMedia(email, slug, mediatype, file);
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Post('upload-multiple-media')
-  @UseInterceptors(FilesInterceptor('files', 10)) // Allow up to 10 files
-  async uploadMultipleMedia(
-    @Req() req,
-    @Query('code') slug: string,
-    @Query('mediatype') mediatype: string,
-    @UploadedFiles() files: Express.Multer.File[]
-  ) {
-    const email = req.user.email;
-    return this.deadPersonProfileService.uploadMultipleMedia(email, slug, mediatype, files);
-  }
-
-  @Post('upload-guestbook-photo')
-  @UseInterceptors(FileInterceptor('photo'))
-  async uploadGuestbookPhoto(
-    @Query('code') slug: string,
-    @UploadedFile() file: Express.Multer.File,
-    @Body() body: Omit<CreateGuestBookDto, 'photo_upload'>
-  ) {
-    return this.deadPersonProfileService.addGuestbookWithPhoto(slug, body, file);
-  }
 
   @UseGuards(JwtAuthGuard)
   @Post('add-media')

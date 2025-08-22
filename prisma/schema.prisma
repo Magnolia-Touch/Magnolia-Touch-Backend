@@ -69,9 +69,9 @@ model Products {
   product_name         String
   price                String
   box_contains         String?
-  short_Description    String
-  detailed_description String?
-  company_guarantee    String?
+  short_Description    String  @db.Text
+  detailed_description String? @db.Text
+  company_guarantee    String? @db.Text
   order_ids            Int?
 
   Dimensions      ProductDimension[]
@@ -82,8 +82,10 @@ model Products {
 
 model Services {
   services_id Int    @id @default(autoincrement())
+  image       String
   name        String
   discription String
+  features    String
 }
 
 model Cart {
@@ -160,6 +162,7 @@ model SubscriptionPlan {
 model Flowers {
   flower_id Int @id @default(autoincrement())
 
+  image       String
   Name        String
   Price       String
   Description String?
@@ -178,21 +181,22 @@ model Church {
 }
 
 model Booking {
-  id                 Int       @id @default(autoincrement())
-  booking_ids        String    @unique
-  name_on_memorial   String
-  plot_no            String?
-  User_id            Int
-  church_id          Int
-  Subscription_id    Int
-  amount             Int       @default(0)
-  date1              DateTime
-  date2              DateTime?
-  Flower_id          Int
-  booking_date       DateTime
-  next_cleaning_date DateTime?
-  status             String
-  is_bought          Boolean   @default(false)
+  id                       Int       @id @default(autoincrement())
+  booking_ids              String    @unique
+  name_on_memorial         String
+  plot_no                  String?
+  User_id                  Int
+  church_id                Int
+  Subscription_id          Int
+  amount                   Int       @default(0)
+  first_cleaning_date      DateTime
+  second_cleaning_date     DateTime?
+  no_of_subscription_years Int
+  Flower_id                Int
+  booking_date             DateTime
+  anniversary_date         DateTime?
+  status                   String
+  is_bought                Boolean   @default(false)
 
   user         User             @relation(fields: [User_id], references: [customer_id])
   Church       Church           @relation(fields: [church_id], references: [church_id])

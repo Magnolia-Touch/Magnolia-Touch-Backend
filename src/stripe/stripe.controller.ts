@@ -1,4 +1,4 @@
-import { Controller, Post, HttpCode, HttpStatus, Headers, Req, Body, Query, Request } from '@nestjs/common';
+import { Controller, Post, HttpCode, HttpStatus, Headers, Req, Body, Query, Request, ParseIntPipe } from '@nestjs/common';
 import Stripe from 'stripe';
 import * as dotenv from 'dotenv'
 import { StripeService } from './stripe.service';
@@ -16,11 +16,12 @@ export class StripeController {
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Post('create-payment-intent')
-  async createPaymentIntent(@Body() body: { amount: number; currency: string },@Query('productId') productId: number, @Request() req) {
+  async createPaymentIntent(@Body() body: { amount: number; currency: string },@Query('productId', ParseIntPipe) productId: number, @Request() req) {
     const { amount, currency } = body;
     const email = req.user.email
     return this.stripeService.createPaymentIntentforProduct(amount, currency, productId, email);
   }
+  // need to add buy from cart also
 
   // @Post('webhook')
   // @HttpCode(HttpStatus.OK)

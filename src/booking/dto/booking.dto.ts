@@ -8,14 +8,18 @@ export class CreateBookingDto {
   plot_no: string;
 
   @IsString()
-  date1: Date;
+  first_cleaning_date: Date;
 
   @IsOptional()
   @IsString()
-  date2?: Date;
+  second_cleaning_date?: Date;
 
   @IsOptional()
   @IsString()
-  next_cleaning_date?: Date;
+  anniversary_date?: Date;
+
+  @IsOptional()
+  @IsInt()
+  no_of_subsribe_years?: number;
 // convert this to anniversary date
 }

@@ -194,10 +194,11 @@ export class AuthService {
                     name_on_memorial: true,
                     plot_no: true,
                     amount: true,
-                    date1: true,
-                    date2: true,
+                    first_cleaning_date: true,
+                    second_cleaning_date: true,
                     booking_date: true,
-                    next_cleaning_date: true,
+                    anniversary_date: true,
+                    no_of_subscription_years: true,
                     status: true,
                     Church: {
                         select: {

@@ -2,6 +2,10 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { generate } from 'rxjs';
 import Stripe from 'stripe';
 import { generateOrderIdforProduct, generateOrderIdforService } from 'src/utils/code-generator.util';
+import { PrismaService } from 'src/prisma/prisma.service';
+
+
+
 
 @Injectable()
 export class StripeService {
@@ -11,6 +15,7 @@ export class StripeService {
   constructor(
     @Inject('STRIPE_API_KEY')
     private readonly apiKey: string,
+    private prisma: PrismaService
   ) {
     this.stripe = new Stripe(this.apiKey, {
       apiVersion: '2025-06-30.basil', // Use latest API version, or "null" for your default
@@ -19,32 +24,49 @@ export class StripeService {
 
   // Accept Payments (Create Payment Intent)
   async createPaymentIntentforProduct(
-    amount: number,
-    currency: string,
-    product_id: number, // Assuming you want to include product_id in metadata
-    user_email: string
+  amount: number,
+  currency: string,
+  product_id: number,
+  user_email: string,
+): Promise<Stripe.PaymentIntent> {
+  try {
+    // 1. Fetch product details from Prisma (or whatever ORM you use)
+    const product = await this.prisma.products.findUnique({
+      where: { product_id: product_id },
+    });
 
-  ): Promise<Stripe.PaymentIntent> {
-    try {
-      const paymentIntent = await this.stripe.paymentIntents.create({
-        amount,
-        currency,
-        metadata: {
-          product_id: product_id,
-          order_id: generateOrderIdforProduct(), 
-          description: 'Payment for order',
-          user_email: user_email, // Include user email in metadata
-        }
-      });
-      this.logger.log(
-        `PaymentIntent created successfully with amount: ${amount} ${currency}`,
-      );
-      return paymentIntent;
-    } catch (error) {
-      this.logger.error('Failed to create PaymentIntent', error.stack);
-      throw error;
+    if (!product) {
+      throw new Error(`Product with ID ${product_id} not found`);
     }
+
+    // 2. Create PaymentIntent with full product details in metadata
+    const paymentIntent = await this.stripe.paymentIntents.create({
+      amount,
+      currency,
+      metadata: {
+        product_id: String(product.product_id),
+        product_name: product.product_name,
+        price: String(product.price),
+        box_contains: product.box_contains,
+        short_Description: product.short_Description?.slice(0, 200), // trim if too long
+        order_id: generateOrderIdforProduct(),
+        description: 'Payment for order product',
+        user_email: user_email,
+      },
+    });
+
+    this.logger.log(
+      `PaymentIntent created successfully for product ${product.product_name} with amount: ${amount} ${currency}`,
+    );
+
+    return paymentIntent;
+  } catch (error) {
+    this.logger.error('Failed to create PaymentIntent', error.stack);
+    throw error;
   }
+}
+
+// #need to create webhook to confirm payment and thereafter confirm product order
 
   async createPaymentIntentforService(
     amount: number,
@@ -60,7 +82,7 @@ export class StripeService {
         metadata: {
           service_id: service_id,
           order_id: generateOrderIdforService(), 
-          description: 'Payment for order',
+          description: 'Payment for Book Service',
           user_email: user_email, // Include user email in metadata
         }
       });

@@ -6,9 +6,11 @@ import { CreateFlowerDto } from './dto/createflower.dto';
 export class FlowersService {
   constructor(private prisma: PrismaService) {}
 
-  async createFlower(dto: CreateFlowerDto) {
+  async createFlower(dto: CreateFlowerDto, image: Express.Multer.File) {
+    const imagePath = image.path;
     const flower = await this.prisma.flowers.create({
       data: {
+        image: imagePath,
         Name: dto.Name,
         Description: dto.Description,
         Price: dto.Price,
