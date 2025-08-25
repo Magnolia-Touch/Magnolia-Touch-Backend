@@ -76,7 +76,6 @@ export class BookingService {
     };
   }
 
-
   async updateStaus(id: number, updatecleaningstatus: UpdateBookingstatusDto) {
     return this.prisma.booking.update({
       where: { id },
@@ -85,7 +84,6 @@ export class BookingService {
       },
     })
   }
-
 
   // ##need to connect stripe webhook to confirm payment and thereafter booking
 }
