@@ -3,6 +3,8 @@ import { generate } from 'rxjs';
 import Stripe from 'stripe';
 import { generateOrderIdforProduct, generateOrderIdforService } from 'src/utils/code-generator.util';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { OrdersService } from 'src/orders/orders.service';
+import { CheckoutDto } from './dto/checkout.dto';
 
 
 
@@ -11,62 +13,115 @@ import { PrismaService } from 'src/prisma/prisma.service';
 export class StripeService {
   private stripe: Stripe;
   private readonly logger = new Logger(StripeService.name);
-  
+
   constructor(
     @Inject('STRIPE_API_KEY')
     private readonly apiKey: string,
-    private prisma: PrismaService
+    private prisma: PrismaService,
+    private orderservice: OrdersService
   ) {
     this.stripe = new Stripe(this.apiKey, {
       apiVersion: '2025-06-30.basil', // Use latest API version, or "null" for your default
     });
   }
 
-  // Accept Payments (Create Payment Intent)
   async createPaymentIntentforProduct(
-  amount: number,
-  currency: string,
-  product_id: number,
-  user_email: string,
-): Promise<Stripe.PaymentIntent> {
-  try {
-    // 1. Fetch product details from Prisma (or whatever ORM you use)
-    const product = await this.prisma.products.findUnique({
-      where: { product_id: product_id },
-    });
+    checkoutdto: CheckoutDto,
+    user_email: string,
+    product_id?: number,
+    quantity?: number,
+    cartId?: number,
+  ): Promise<Stripe.PaymentIntent> {
+    let items: {
+      productId: number;
+      quantity: number;
+      price: number;
+      total: number;
+    }[] = [];
 
-    if (!product) {
-      throw new Error(`Product with ID ${product_id} not found`);
+    let subtotal = 0;
+    let product: any | null = null;
+    const { shippingaddressId, billingaddressId, currency } = checkoutdto
+    try {
+      // Case 1: Checkout from Cart
+      if (cartId) {
+        const cartItems = await this.prisma.cartItem.findMany({
+          where: { cartId },
+          include: { product: true },
+        });
+
+        if (!cartItems.length) throw new Error('Cart is empty');
+
+        items = cartItems.map((ci) => ({
+          productId: ci.productId,
+          quantity: ci.quantity,
+          price: Number(ci.product.price),
+          total: ci.quantity * Number(ci.product.price),
+        }));
+        subtotal = items.reduce((acc, i) => acc + i.total, 0);
+      }
+      else if (product_id) {
+        product = await this.prisma.products.findUnique({
+          where: { product_id },
+        });
+
+        if (!product) throw new Error(`Product with ID ${product_id} not found`);
+
+        items = [
+          {
+            productId: product.product_id,
+            quantity: quantity ?? 1,
+            price: Number(product.price),
+            total: (quantity ?? 1) * Number(product.price),
+          },
+        ];
+
+        subtotal = items[0].total;
+      }
+
+      // 1️⃣ Create Order in DB
+      const order = await this.orderservice.create({
+        User_id: 1, // TODO: replace with req.user.id
+        orderNumber: generateOrderIdforProduct(),
+        status: 'pending',
+        totalAmount: subtotal,
+        shippingAddressId: shippingaddressId,
+        billingAddressId: billingaddressId,
+        tracking_details: undefined,
+        delivery_agent_id: undefined,
+        items,
+      });
+      // 2️⃣ Create PaymentIntent in Stripe
+      const paymentIntent = await this.stripe.paymentIntents.create({
+        amount: Math.round(subtotal * 100), // Stripe expects smallest currency unit (e.g. cents)
+        currency,
+        metadata: {
+          order_id: String(order.id),
+          orderNumber: order.orderNumber,
+          user_email,
+          ...(product
+            ? {
+              product_id: String(product.product_id),
+              product_name: product.product_name,
+              price: String(product.price),
+              box_contains: product.box_contains,
+              short_Description: product.short_Description?.slice(0, 200),
+            }
+            : { cartId: String(cartId) }),
+        },
+      });
+      this.logger.log(
+        `PaymentIntent created successfully with amount: ${subtotal} ${currency}`,
+      );
+      return paymentIntent;
+    } catch (error) {
+      this.logger.error('Failed to create PaymentIntent', error.stack);
+      throw error;
     }
-
-    // 2. Create PaymentIntent with full product details in metadata
-    const paymentIntent = await this.stripe.paymentIntents.create({
-      amount,
-      currency,
-      metadata: {
-        product_id: String(product.product_id),
-        product_name: product.product_name,
-        price: String(product.price),
-        box_contains: product.box_contains,
-        short_Description: product.short_Description?.slice(0, 200), // trim if too long
-        order_id: generateOrderIdforProduct(),
-        description: 'Payment for order product',
-        user_email: user_email,
-      },
-    });
-
-    this.logger.log(
-      `PaymentIntent created successfully for product ${product.product_name} with amount: ${amount} ${currency}`,
-    );
-
-    return paymentIntent;
-  } catch (error) {
-    this.logger.error('Failed to create PaymentIntent', error.stack);
-    throw error;
   }
-}
 
-// #need to create webhook to confirm payment and thereafter confirm product order
+
+  // #need to create webhook to confirm payment and thereafter confirm product order
 
   async createPaymentIntentforService(
     amount: number,
@@ -81,7 +136,7 @@ export class StripeService {
         currency,
         metadata: {
           service_id: service_id,
-          order_id: generateOrderIdforService(), 
+          order_id: generateOrderIdforService(),
           description: 'Payment for Book Service',
           user_email: user_email, // Include user email in metadata
         }

@@ -6,4 +6,11 @@ export class CreateChurchDto {
 
   @IsString()
   church_address: string;
+
+  @IsString()
+  city: string;
+
+  @IsString()
+  state: string;
+
 }

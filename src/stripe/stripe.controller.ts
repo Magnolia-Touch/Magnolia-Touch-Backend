@@ -5,6 +5,7 @@ import { StripeService } from './stripe.service';
 import { UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/common/decoraters/roles.guard';
+import { CheckoutDto } from './dto/checkout.dto';
 dotenv.config()
 const stripe = new Stripe(process.env.STRIPE_API_KEY!, {
   apiVersion: '2025-06-30.basil',
@@ -12,15 +13,26 @@ const stripe = new Stripe(process.env.STRIPE_API_KEY!, {
 
 @Controller('stripe')
 export class StripeController {
-  constructor(private readonly stripeService: StripeService) {}
+  constructor(private readonly stripeService: StripeService) { }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard)
   @Post('create-payment-intent')
-  async createPaymentIntent(@Body() body: { amount: number; currency: string },@Query('productId', ParseIntPipe) productId: number, @Request() req) {
-    const { amount, currency } = body;
-    const email = req.user.email
-    return this.stripeService.createPaymentIntentforProduct(amount, currency, productId, email);
+  async createPaymentIntent(
+    @Body() checkoutdto: CheckoutDto,
+    @Request() req,
+  ) {
+    const email = req.user.email;
+    const { productId, quantity, cartId } = checkoutdto;
+
+    return this.stripeService.createPaymentIntentforProduct(
+      checkoutdto,
+      email,
+      productId,
+      quantity,
+      cartId,
+    );
   }
+
   // need to add buy from cart also
 
   // @Post('webhook')

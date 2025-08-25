@@ -51,24 +51,24 @@ export class UserService {
 
 
   // User delivery Address Creation function
-  async createDeliAddrs(dto: CreateUserAddressDto) {
-    return this.prisma.userAddress.create({ data: dto });
+  async createDeliAddrs(dto: CreateUserAddressDto, user_id: number) {
+    return this.prisma.userAddress.create({ data:{...dto, userCustomer_id: user_id} });
   }
 
 
-  async getAllDeliAddrs() {
-    return this.prisma.userAddress.findMany();
+  async getAllDeliAddrs(user_id: number) {
+    return this.prisma.userAddress.findMany({where: { userCustomer_id: user_id }});
   }
 
 
   //User Billing Address Creation functions
-  async createBillAddrs(dto: CreateBillingAddressDto) {
-    return this.prisma.billingAddress.create({ data: dto });
+  async createBillAddrs(dto: CreateBillingAddressDto, user_id: number) {
+    return this.prisma.billingAddress.create({ data:{...dto, userCustomer_id: user_id}});
   }
 
 
-  async getAllBillAddr() {
-    return this.prisma.billingAddress.findMany();
+  async getAllBillAddr(user_id: number) {
+    return this.prisma.billingAddress.findMany({where: { userCustomer_id: user_id }});
   }
 
   

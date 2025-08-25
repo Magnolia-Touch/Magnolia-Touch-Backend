@@ -2,6 +2,7 @@ import { DynamicModule, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { StripeController } from './stripe.controller';
 import { StripeService } from './stripe.service';
+import { OrdersModule } from 'src/orders/orders.module';
 
 @Module({})
 export class StripeModule {
@@ -10,7 +11,7 @@ export class StripeModule {
       module: StripeModule,
       controllers: [StripeController],
       exports:[StripeService],
-      imports: [ConfigModule.forRoot()],
+      imports: [OrdersModule, ConfigModule.forRoot()],
       providers: [
         StripeService,
         {

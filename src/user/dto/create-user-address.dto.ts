@@ -23,7 +23,5 @@ export class CreateUserAddressDto {
   @IsString()
   email: string;
 
-  @IsOptional()
-  @IsInt()
-  userCustomer_id?: number;
+
 }
