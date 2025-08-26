@@ -19,17 +19,16 @@ export class S3Service {
     this.bucketName = this.configService.get<string>('AWS_S3_BUCKET_NAME')!;
   }
 
+
   async uploadFile(file: Express.Multer.File, folder: string = 'uploads'): Promise<string> {
     if (!file) {
       throw new BadRequestException('No file provided');
     }
-
     // Generate unique filename
     const timestamp = Date.now();
     const randomString = Math.random().toString(36).substring(2, 15);
     const fileExtension = file.originalname.split('.').pop();
     const fileName = `${folder}/${timestamp}-${randomString}.${fileExtension}`;
-
     try {
       const command = new PutObjectCommand({
         Bucket: this.bucketName,
@@ -38,9 +37,7 @@ export class S3Service {
         ContentType: file.mimetype,
         ACL: 'public-read', // Make files publicly accessible
       });
-
       await this.s3Client.send(command);
-
       // Return the public URL
       return `https://${this.bucketName}.s3.${this.configService.get('AWS_REGION')}.amazonaws.com/${fileName}`;
     } catch (error) {

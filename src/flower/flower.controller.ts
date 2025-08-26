@@ -13,24 +13,24 @@ import { extname } from 'path';
 
 @Controller('flowers')
 export class FlowersController {
-  constructor(private readonly flowersService: FlowersService) {}
+  constructor(private readonly flowersService: FlowersService) { }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
   @Post('add-flower')
   @UseInterceptors(
-      FileInterceptor('image', {
-        storage: diskStorage({
-          destination: './uploads/flowers',
-          filename: (req, file, cb) => {
-            const uniqueName =
-              Date.now() + '-' + Math.round(Math.random() * 1e9);
-            cb(null, `${uniqueName}${extname(file.originalname)}`);
-          },
-        }),
+    FileInterceptor('image', {
+      storage: diskStorage({
+        destination: './uploads/flowers',
+        filename: (req, file, cb) => {
+          const uniqueName =
+            Date.now() + '-' + Math.round(Math.random() * 1e9);
+          cb(null, `${uniqueName}${extname(file.originalname)}`);
+        }
       }),
-    )
-  create(@UploadedFile() image: Express.Multer.File,@Body() dto: CreateFlowerDto) {
+    }),
+  )
+  create(@UploadedFile() image: Express.Multer.File, @Body() dto: CreateFlowerDto) {
     return this.flowersService.createFlower(dto, image);
   }
 

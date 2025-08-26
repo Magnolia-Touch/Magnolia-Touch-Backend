@@ -1,6 +1,5 @@
 import { CreateFamilyDto } from "./create-family.dto";
 import { CreateGuestBookDto } from "./create-guestbook.dto";
-import { CreateGalleryDto } from "./create-gallery.dto";
 import { CreateBiographyDto } from "./create-biography.dto";
 
 
@@ -15,7 +14,6 @@ export class CreateDeadPersonProfileDto {
   slug: string;
 
   biography?: CreateBiographyDto[];
-  gallery?: CreateGalleryDto[];
   family?: CreateFamilyDto[];
   guestBook?: CreateGuestBookDto[];
 }

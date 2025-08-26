@@ -4,7 +4,7 @@ import { CreateFlowerDto } from './dto/createflower.dto';
 
 @Injectable()
 export class FlowersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async createFlower(dto: CreateFlowerDto, image: Express.Multer.File) {
     const imagePath = image.path;
@@ -37,18 +37,18 @@ export class FlowersService {
 
   async updateStock(flower_id: number, is_stock: boolean) {
     const flower = await this.prisma.flowers.findUnique({ where: { flower_id } })
-    if (!flower){
+    if (!flower) {
       throw new NotFoundException('Flower not found');
     }
-    
+
     await this.prisma.flowers.update({
       where: { flower_id },
       data: { in_stock: is_stock }
     })
     return {
-    message: 'Flower stock updated successfully',
-    data: null,
-    status: HttpStatus.OK,
+      message: 'Flower stock updated successfully',
+      data: null,
+      status: HttpStatus.OK,
     }
   }
 }

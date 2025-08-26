@@ -2,18 +2,17 @@ import { Injectable, NotFoundException, BadRequestException, ForbiddenException 
 import { PrismaService } from '../prisma/prisma.service';
 import { S3Service } from '../s3/s3.service';
 import { CreateDeadPersonProfileDto } from './dto/memorial_profile.dto';
-import { CreateFamilyMemberDto} from './dto/create-family.dto';
+import { CreateFamilyMemberDto } from './dto/create-family.dto';
 import { CreateGuestBookDto } from './dto/create-guestbook.dto';
 import { generateCode } from 'src/utils/code-generator.util'; // adjust path if needed
 import { HttpStatus } from '@nestjs/common';
-import { CreateGalleryDto } from './dto/create-gallery.dto';
 
 @Injectable()
 export class MemorialProfileService {
   constructor(
     private prisma: PrismaService,
     private s3Service: S3Service
-  ) {}
+  ) { }
 
   //Create profile for Dead Person
   async create(dto: Partial<CreateDeadPersonProfileDto>, email: string) {
@@ -22,7 +21,7 @@ export class MemorialProfileService {
     });
 
     if (!user) {
-       throw new NotFoundException('User not found');
+      throw new NotFoundException('User not found');
     }
     let uniqueSlug = '';
     let isUnique = false;
@@ -62,7 +61,7 @@ export class MemorialProfileService {
         deadPersonProfiles: uniqueSlug
       }
     })
-    return {profile, biography, gallery, family, guestbook};
+    return { profile, biography, gallery, family, guestbook };
 
   }
 
@@ -86,8 +85,9 @@ export class MemorialProfileService {
   }
 
 
-  async addGuestbook(slug: string, dto: CreateGuestBookDto) {
-    const { first_name, last_name, guestemail, phone, message, photo_upload } = dto;
+  async addGuestbook(slug: string, dto: CreateGuestBookDto, image: Express.Multer.File) {
+    const { first_name, last_name, guestemail, phone, message } = dto;
+    const imagePath = image.path;
     const date = new Date().toISOString(); // Get current date in ISO format
     const profile = await this.prisma.deadPersonProfile.findUnique({
       where: { slug },
@@ -98,17 +98,17 @@ export class MemorialProfileService {
     if (!profile || !profile.guestBook.length) {
       throw new NotFoundException('Guestbook not found for this profile');
     }
-    
-    const guestbook_id = profile.guestBook[0].guestbook_id; 
+
+    const guestbook_id = profile.guestBook[0].guestbook_id;
     const created = await this.prisma.guestBookItems.create({
       data: {
         guestbook_id: guestbook_id,
         first_name: first_name,
         last_name: last_name,
-        email:guestemail,
+        email: guestemail,
         message: message,
-        phone:phone,
-        photo_upload: photo_upload,
+        phone: phone,
+        photo_upload: imagePath,
         date: date,
         is_approved: false
       },
@@ -146,7 +146,7 @@ export class MemorialProfileService {
     const profile = await this.prisma.deadPersonProfile.findUnique({
       where: { slug }
     });
-    
+
     if (!profile) {
       throw new NotFoundException('Profile not found');
     }
@@ -180,7 +180,7 @@ export class MemorialProfileService {
         gallery: true,
       },
     });
-    
+
     if (!profile || !profile.gallery.length) {
       throw new NotFoundException('Gallery not found for this profile');
     }
@@ -205,7 +205,7 @@ export class MemorialProfileService {
         is_approved: true,
       },
     })
-    
+
     return {
       message: 'GuestMessage Approved Succesfully',
       status: HttpStatus.OK,
@@ -219,7 +219,7 @@ export class MemorialProfileService {
         gallery: true,
       },
     });
-    
+
     if (!profile || !profile.gallery.length) {
       throw new NotFoundException('Gallery not found for this profile');
     }
@@ -259,7 +259,7 @@ export class MemorialProfileService {
         guestbook_id: guestbook.guestbook_id,
       },
     })
-    
+
     return {
       message: 'GuestBook item deleted successfully',
       status: HttpStatus.OK,
@@ -299,11 +299,11 @@ export class MemorialProfileService {
       greatGrandParents: 'greatGrandParents',
       pets: 'pets',
       childrens: 'childrens',
-      spouse:'spouse',
-      friends:'friends',
-      cousins:'cousins',
-      siblings:'siblings',
-      parents:'parents'
+      spouse: 'spouse',
+      friends: 'friends',
+      cousins: 'cousins',
+      siblings: 'siblings',
+      parents: 'parents'
     }[relation] ?? relation; // keep consistent for special cases
     const modelName = model.charAt(0).toUpperCase() + model.slice(1);
     // Create the family member using the appropriate model
@@ -403,7 +403,7 @@ export class MemorialProfileService {
 
 
   async updateFamilybyId(email: string, slug: string, relation: string, id: number, dto: CreateFamilyMemberDto) {
-    const {name} = dto
+    const { name } = dto
     const profile = await this.prisma.deadPersonProfile.findUnique({
       where: { slug }
     });
@@ -450,8 +450,8 @@ export class MemorialProfileService {
     return { message: `${relation} updated successfully`, updated };
   }
 
-  
-  async deleteFamilybyId(email:string, slug: string, relation: string, id: number) {
+
+  async deleteFamilybyId(email: string, slug: string, relation: string, id: number) {
     const profile = await this.prisma.deadPersonProfile.findUnique({
       where: { slug }
     });
@@ -466,8 +466,8 @@ export class MemorialProfileService {
       where: { deadPersonProfiles: slug },
     });
     if (!family) {
-     throw new NotFoundException('Family not found for the provided slug');
-      
+      throw new NotFoundException('Family not found for the provided slug');
+
     }
     const relationMap: Record<string, string> = {
       parents: 'parents',
@@ -496,8 +496,8 @@ export class MemorialProfileService {
   }
 
 
-  async addGalleryItems(email: string, slug: string, mediatype: string, dto: CreateGalleryDto) {
-    const { link } = dto;
+  async addGalleryItems(email: string, slug: string, mediatype: string, image: Express.Multer.File) {
+    const imagePath = image.path;
     const profile = await this.prisma.deadPersonProfile.findUnique({
       where: { slug },
       include: {
@@ -529,7 +529,7 @@ export class MemorialProfileService {
     // Create the family member using the appropriate model
     const created = await this.prisma[modelName].create({
       data: {
-        url: link,
+        url: imagePath,
         gallery_id,
         deadPersonProfiles: slug,
       },
@@ -541,7 +541,7 @@ export class MemorialProfileService {
     };
   }
 
-  
+
   async getGallery(slug: string) {
     const profile = await this.prisma.deadPersonProfile.findUnique({
       where: { slug },
@@ -674,7 +674,7 @@ export class MemorialProfileService {
     }
 
     // Update profile with new image URL
-    const updateData = type === 'profile' 
+    const updateData = type === 'profile'
       ? { profile_image: imageUrl }
       : { background_image: imageUrl };
 
@@ -734,7 +734,7 @@ export class MemorialProfileService {
     // Save to database
     const gallery_id = profile.gallery[0].gallery_id;
     const modelName = mediatype.charAt(0).toUpperCase() + mediatype.slice(1);
-    
+
     const created = await this.prisma[modelName].create({
       data: {
         url: mediaUrl,
@@ -782,7 +782,7 @@ export class MemorialProfileService {
     }
 
     const maxSize = mediatype.toLowerCase() === 'videos' ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
-    
+
     for (const file of files) {
       if (!this.s3Service.validateFileType(file, allowedTypes)) {
         throw new BadRequestException(`Invalid file type for ${file.originalname}. Expected ${mediatype}.`);
@@ -799,7 +799,7 @@ export class MemorialProfileService {
     // Save all to database
     const gallery_id = profile.gallery[0].gallery_id;
     const modelName = mediatype.charAt(0).toUpperCase() + mediatype.slice(1);
-    
+
     const createdItems: any[] = [];
     for (const url of uploadedUrls) {
       const created = await this.prisma[modelName].create({
@@ -822,7 +822,7 @@ export class MemorialProfileService {
   async addGuestbookWithPhoto(slug: string, dto: Omit<CreateGuestBookDto, 'photo_upload'>, file?: Express.Multer.File) {
     const { first_name, last_name, guestemail, phone, message } = dto;
     const date = new Date().toISOString();
-    
+
     const profile = await this.prisma.deadPersonProfile.findUnique({
       where: { slug },
       include: { guestBook: true },
@@ -832,7 +832,7 @@ export class MemorialProfileService {
     }
 
     let photoUrl: string | null = null;
-    
+
     // Upload photo to S3 if provided
     if (file) {
       // Validate photo

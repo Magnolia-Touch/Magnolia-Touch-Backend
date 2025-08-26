@@ -1,18 +1,22 @@
 
-import { Controller, Post, Body, Query, Get, Patch, Req, Param, ParseIntPipe, Delete } from '@nestjs/common';
+import { Controller, Post, Body, Query, Get, Patch, Req, Param, ParseIntPipe, Delete, UseInterceptors, UploadedFile } from '@nestjs/common';
 import { MemorialProfileService } from './memorial.service';
 import { CreateDeadPersonProfileDto } from './dto/memorial_profile.dto';
 import { CreateFamilyMemberDto } from './dto/create-family.dto';
 import { UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
-import { CreateGalleryDto } from './dto/create-gallery.dto';
 import { CreateGuestBookDto } from './dto/create-guestbook.dto';
 import { RolesGuard } from 'src/common/decoraters/roles.guard';
 import { Roles } from 'src/common/decoraters/roles.decorator';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
+
+
 
 @Controller('memories')
 export class MemorialController {
-  constructor(private readonly deadPersonProfileService: MemorialProfileService) {}
+  constructor(private readonly deadPersonProfileService: MemorialProfileService) { }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
@@ -24,7 +28,7 @@ export class MemorialController {
     return this.deadPersonProfileService.create(dto, email);
   }
 
-  
+
   @Get('')
   async getBySlug(@Query('code') slug: string) {
     return this.deadPersonProfileService.getProfile(slug);
@@ -32,12 +36,25 @@ export class MemorialController {
 
 
   @Post('add-guestbook')
+  @UseInterceptors(
+    FileInterceptor('image', {
+      storage: diskStorage({
+        destination: './uploads/guestimages',
+        filename: (req, file, cb) => {
+          const uniqueName =
+            Date.now() + '-' + Math.round(Math.random() * 1e9);
+          cb(null, `${uniqueName}${extname(file.originalname)}`);
+        }
+      }),
+    }),
+  )
   async addGuestBook(
     @Req() req,
     @Query('code') slug: string,
-    @Body() body: CreateGuestBookDto
+    @Body() body: CreateGuestBookDto,
+    @UploadedFile() image: Express.Multer.File
   ) {
-    return this.deadPersonProfileService.addGuestbook(slug, body);
+    return this.deadPersonProfileService.addGuestbook(slug, body, image);
   }
 
 
@@ -94,7 +111,7 @@ export class MemorialController {
     @Query('relation') relation: string,
     @Query('id', ParseIntPipe) id: number
   ) {
-    
+
     return this.deadPersonProfileService.getFamilybyId(slug, relation, id);
   }
 
@@ -126,21 +143,34 @@ export class MemorialController {
 
   @UseGuards(JwtAuthGuard)
   @Post('add-media')
+  @UseInterceptors(
+    FileInterceptor('media', {
+      storage: diskStorage({
+        destination: './uploads/gallery',
+        filename: (req, file, cb) => {
+          const uniqueName =
+            Date.now() + '-' + Math.round(Math.random() * 1e9);
+          cb(null, `${uniqueName}${extname(file.originalname)}`);
+        }
+      }),
+    }),
+  )
   async addGalleryItems(
     @Req() req,
     @Query('code') slug: string,
     @Query('mediatype') relation: string,
-    @Body() body: CreateGalleryDto
+    @UploadedFile() media: Express.Multer.File
+
   ) {
     const email = req.user.email;
-    return this.deadPersonProfileService.addGalleryItems(email, slug, relation, body);
+    return this.deadPersonProfileService.addGalleryItems(email, slug, relation, media);
   }
 
   @Get('by-code-gallery')
   async getGallery(@Query('code') slug: string) {
     return this.deadPersonProfileService.getGallery(slug);
   }
-  
+
   @UseGuards(JwtAuthGuard)
   @Delete('delete-media')
   async deleteGalleryItems(
@@ -152,20 +182,6 @@ export class MemorialController {
     const email = req.user.email;
     return this.deadPersonProfileService.deleteGalleryItems(email, slug, relation, id);
   }
-  
+
 }
 
-
-// todo: 
-// family -- completed
-//make proper error handling
-// retrieve, update and delete for biography, family, guestbook and gallery
-
-// guestbook
-// guestbook can be added -- done
-// guestbook message without approval view by profile owner -- done
-// guestbook message with approval View by anyone --done
-// delete guestbook message by profile owner -- done
-// update guestbook for change approve guestmessges -- done
-
-//gallery
