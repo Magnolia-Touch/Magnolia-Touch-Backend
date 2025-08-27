@@ -1,5 +1,5 @@
 
-import { Controller, Post, Body, Query, Get, Patch, Req, Param, ParseIntPipe, Delete, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { Controller, Post, Body, Query, Get, Patch, Req, Param, ParseIntPipe, Delete, UseInterceptors, UploadedFile, UploadedFiles } from '@nestjs/common';
 import { MemorialProfileService } from './memorial.service';
 import { CreateDeadPersonProfileDto } from './dto/memorial_profile.dto';
 import { CreateFamilyMemberDto } from './dto/create-family.dto';
@@ -8,9 +8,7 @@ import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { CreateGuestBookDto } from './dto/create-guestbook.dto';
 import { RolesGuard } from 'src/common/decoraters/roles.guard';
 import { Roles } from 'src/common/decoraters/roles.decorator';
-import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 
 
 
@@ -19,7 +17,7 @@ export class MemorialController {
   constructor(private readonly deadPersonProfileService: MemorialProfileService) { }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
+ // @Roles('ADMIN')
   @Post('create-memorial-profile')
   async create(
     @Body() dto: Partial<CreateDeadPersonProfileDto>,
@@ -36,18 +34,7 @@ export class MemorialController {
 
 
   @Post('add-guestbook')
-  @UseInterceptors(
-    FileInterceptor('image', {
-      storage: diskStorage({
-        destination: './uploads/guestimages',
-        filename: (req, file, cb) => {
-          const uniqueName =
-            Date.now() + '-' + Math.round(Math.random() * 1e9);
-          cb(null, `${uniqueName}${extname(file.originalname)}`);
-        }
-      }),
-    }),
-  )
+  @UseInterceptors(FileInterceptor('image'))
   async addGuestBook(
     @Req() req,
     @Query('code') slug: string,
@@ -143,18 +130,7 @@ export class MemorialController {
 
   @UseGuards(JwtAuthGuard)
   @Post('add-media')
-  @UseInterceptors(
-    FileInterceptor('media', {
-      storage: diskStorage({
-        destination: './uploads/gallery',
-        filename: (req, file, cb) => {
-          const uniqueName =
-            Date.now() + '-' + Math.round(Math.random() * 1e9);
-          cb(null, `${uniqueName}${extname(file.originalname)}`);
-        }
-      }),
-    }),
-  )
+  @UseInterceptors(FileInterceptor('media'))
   async addGalleryItems(
     @Req() req,
     @Query('code') slug: string,
@@ -181,6 +157,46 @@ export class MemorialController {
   ) {
     const email = req.user.email;
     return this.deadPersonProfileService.deleteGalleryItems(email, slug, relation, id);
+  }
+
+  // New S3-integrated endpoints
+  @UseGuards(JwtAuthGuard)
+  @Post('upload-profile-image')
+  @UseInterceptors(FileInterceptor('image'))
+  async uploadProfileImage(
+    @Req() req,
+    @Query('code') slug: string,
+    @Query('type') type: 'profile' | 'background',
+    @UploadedFile() image: Express.Multer.File
+  ) {
+    const email = req.user.email;
+    return this.deadPersonProfileService.uploadProfileImage(email, slug, type, image);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('upload-media')
+  @UseInterceptors(FileInterceptor('media'))
+  async uploadMedia(
+    @Req() req,
+    @Query('code') slug: string,
+    @Query('mediatype') mediatype: string,
+    @UploadedFile() media: Express.Multer.File
+  ) {
+    const email = req.user.email;
+    return this.deadPersonProfileService.uploadMedia(email, slug, mediatype, media);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('upload-multiple-media')
+  @UseInterceptors(FilesInterceptor('media', 10)) // Allow up to 10 files
+  async uploadMultipleMedia(
+    @Req() req,
+    @Query('code') slug: string,
+    @Query('mediatype') mediatype: string,
+    @UploadedFiles() media: Express.Multer.File[]
+  ) {
+    const email = req.user.email;
+    return this.deadPersonProfileService.uploadMultipleMedia(email, slug, mediatype, media);
   }
 
 }

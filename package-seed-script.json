@@ -1,0 +1,6 @@
+{
+  "scripts": {
+    "seed": "npx ts-node prisma/seed.ts",
+    "seed:reset": "npx prisma db push --force-reset && npm run seed"
+  }
+}

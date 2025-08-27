@@ -87,7 +87,23 @@ export class MemorialProfileService {
 
   async addGuestbook(slug: string, dto: CreateGuestBookDto, image: Express.Multer.File) {
     const { first_name, last_name, guestemail, phone, message } = dto;
-    const imagePath = image.path;
+    
+    let imageUrl: string | null = null;
+    if (image) {
+      // Upload image to S3
+      const allowedImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      if (!this.s3Service.validateFileType(image, allowedImageTypes)) {
+        throw new BadRequestException('Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed.');
+      }
+      
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (!this.s3Service.validateFileSize(image, maxSize)) {
+        throw new BadRequestException('File size too large. Maximum size is 5MB.');
+      }
+      
+      imageUrl = await this.s3Service.uploadFile(image, `guestbook/${slug}/images`);
+    }
+    
     const date = new Date().toISOString(); // Get current date in ISO format
     const profile = await this.prisma.deadPersonProfile.findUnique({
       where: { slug },
@@ -108,7 +124,7 @@ export class MemorialProfileService {
         email: guestemail,
         message: message,
         phone: phone,
-        photo_upload: imagePath,
+        photo_upload: imageUrl,
         date: date,
         is_approved: false
       },
@@ -496,49 +512,16 @@ export class MemorialProfileService {
   }
 
 
+  // This method is deprecated - use uploadMedia instead
   async addGalleryItems(email: string, slug: string, mediatype: string, image: Express.Multer.File) {
-    const imagePath = image.path;
-    const profile = await this.prisma.deadPersonProfile.findUnique({
-      where: { slug },
-      include: {
-        gallery: true,
-      },
-    });
-    if (!profile || !profile.gallery.length) {
-      throw new NotFoundException('Gallery not found for this profile');
+    // Redirect to the new S3-integrated method
+    if (mediatype === 'photos' || mediatype === 'videos') {
+      return this.uploadMedia(email, slug, mediatype, image);
+    } else if (mediatype === 'links') {
+      throw new BadRequestException('Links cannot be uploaded as files. Please use a different endpoint to add link URLs.');
+    } else {
+      throw new BadRequestException(`Invalid mediatype: ${mediatype}`);
     }
-    if (email != profile.owner_id) {
-      throw new ForbiddenException('You are not authorized to view this guestbook');
-    }
-    const gallery_id = profile.gallery[0].gallery_id; // assuming one-to-one family
-    // Validate relation to prevent arbitrary table access
-    const validRelations = [
-      'links', 'photos', 'videos'
-    ];
-    if (!validRelations.includes(mediatype)) {
-      throw new BadRequestException(`Invalid Mediatype: ${mediatype}`);
-    }
-    // Construct Prisma model name dynamically (capitalize first letter)
-    const model = {
-      nieceAndNephew: 'links',
-      grandchildrens: 'photos',
-      grandparents: 'videos',
-
-    }[mediatype] ?? mediatype; // keep consistent for special cases
-    const modelName = model.charAt(0).toUpperCase() + model.slice(1);
-    // Create the family member using the appropriate model
-    const created = await this.prisma[modelName].create({
-      data: {
-        url: imagePath,
-        gallery_id,
-        deadPersonProfiles: slug,
-      },
-    });
-    return {
-      message: `${modelName} entry added`,
-      data: created,
-      status: HttpStatus.CREATED,
-    };
   }
 
 
