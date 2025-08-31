@@ -63,7 +63,7 @@ export class BookingService {
         is_bought: false,
       },
     });
-    const paymentIntent = await this.stipeservice.createPaymentIntentforService(amount, 'usd', booking.booking_ids, user_email);
+    const paymentIntent = await this.stipeservice.createPaymentIntentforService(amount, 'usd', booking.booking_ids, user_email, booking.id);
 
 
     return {

@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
+import { OrderStatus } from '@prisma/client';
 
 @Injectable()
 export class OrdersService {
@@ -76,5 +77,20 @@ export class OrdersService {
             status: updatestatusdto.status
         }
     })
+  }
+
+  /**
+   * Update order status with optional notes - used by webhook service
+   */
+  async updateOrderStatus(id: number, updateData: { status?: OrderStatus; notes?: string }) {
+    return this.prisma.orders.update({
+      where: { id },
+      data: {
+        status: updateData.status,
+        notes: updateData.notes,
+        updatedAt: new Date()
+      },
+      include: { items: true }
+    });
   }
 }

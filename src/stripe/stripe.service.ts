@@ -1,13 +1,14 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { generate } from 'rxjs';
+import { ConfigService } from '@nestjs/config';
 import Stripe from 'stripe';
-import { generateOrderIdforProduct, generateOrderIdforService } from 'src/utils/code-generator.util';
+import {
+  generateOrderIdforProduct,
+  generateOrderIdforService,
+} from 'src/utils/code-generator.util';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { OrdersService } from 'src/orders/orders.service';
 import { CheckoutDto } from './dto/checkout.dto';
-
-
-
+import { WebhookService } from './webhook.service';
 
 @Injectable()
 export class StripeService {
@@ -18,16 +19,19 @@ export class StripeService {
     @Inject('STRIPE_API_KEY')
     private readonly apiKey: string,
     private prisma: PrismaService,
-    private orderservice: OrdersService
+    private orderservice: OrdersService,
+    private configService: ConfigService,
+    private webhookService: WebhookService,
   ) {
     this.stripe = new Stripe(this.apiKey, {
-      apiVersion: '2025-06-30.basil', // Use latest API version, or "null" for your default
+      apiVersion: '2025-06-30.basil',
     });
   }
 
   async createPaymentIntentforProduct(
     checkoutdto: CheckoutDto,
     user_email: string,
+    user_id: number,
     product_id?: number,
     quantity?: number,
     cartId?: number,
@@ -41,7 +45,7 @@ export class StripeService {
 
     let subtotal = 0;
     let product: any | null = null;
-    const { shippingaddressId, billingaddressId, currency } = checkoutdto
+    const { shippingaddressId, billingaddressId, currency } = checkoutdto;
     try {
       // Case 1: Checkout from Cart
       if (cartId) {
@@ -60,12 +64,14 @@ export class StripeService {
         }));
         subtotal = items.reduce((acc, i) => acc + i.total, 0);
       }
+      // Case 2: Single Product Checkout
       else if (product_id) {
         product = await this.prisma.products.findUnique({
           where: { product_id },
         });
 
-        if (!product) throw new Error(`Product with ID ${product_id} not found`);
+        if (!product)
+          throw new Error(`Product with ID ${product_id} not found`);
 
         items = [
           {
@@ -81,7 +87,7 @@ export class StripeService {
 
       // 1️⃣ Create Order in DB
       const order = await this.orderservice.create({
-        User_id: 1, // TODO: replace with req.user.id
+        User_id: user_id,
         orderNumber: generateOrderIdforProduct(),
         status: 'pending',
         totalAmount: subtotal,
@@ -91,9 +97,10 @@ export class StripeService {
         delivery_agent_id: undefined,
         items,
       });
+
       // 2️⃣ Create PaymentIntent in Stripe
       const paymentIntent = await this.stripe.paymentIntents.create({
-        amount: Math.round(subtotal * 100), // Stripe expects smallest currency unit (e.g. cents)
+        amount: Math.round(subtotal * 100),
         currency,
         metadata: {
           order_id: String(order.id),
@@ -101,12 +108,12 @@ export class StripeService {
           user_email,
           ...(product
             ? {
-              product_id: String(product.product_id),
-              product_name: product.product_name,
-              price: String(product.price),
-              box_contains: product.box_contains,
-              short_Description: product.short_Description?.slice(0, 200),
-            }
+                product_id: String(product.product_id),
+                product_name: product.product_name,
+                price: String(product.price),
+                box_contains: product.box_contains,
+                short_Description: product.short_Description?.slice(0, 200),
+              }
             : { cartId: String(cartId) }),
         },
       });
@@ -120,114 +127,71 @@ export class StripeService {
     }
   }
 
-
-  // #need to create webhook to confirm payment and thereafter confirm product order
-
   async createPaymentIntentforService(
     amount: number,
     currency: string,
-    service_id: string, // Assuming you want to include service_id in metadata
-    user_email: string
-
+    booking_ids: string, // booking_ids from database
+    user_email: string,
+    booking_id?: number, // optional database ID for webhook processing
   ): Promise<Stripe.PaymentIntent> {
     try {
       const paymentIntent = await this.stripe.paymentIntents.create({
-        amount,
+        amount: Math.round(amount * 100),
         currency,
         metadata: {
-          service_id: service_id,
+          service_id: booking_ids,
+          ...(booking_id ? { booking_id: String(booking_id) } : {}), // ✅ fixed
+          booking_ids,
           order_id: generateOrderIdforService(),
-          description: 'Payment for Book Service',
-          user_email: user_email, // Include user email in metadata
-        }
+          description: 'Payment for Memorial Cleaning Service',
+          user_email,
+        },
       });
       this.logger.log(
-        `PaymentIntent created successfully with amount: ${amount} ${currency}`,
+        `PaymentIntent created successfully for booking ${booking_ids} with amount: ${amount} ${currency}`,
       );
       return paymentIntent;
     } catch (error) {
-      this.logger.error('Failed to create PaymentIntent', error.stack);
+      this.logger.error(
+        'Failed to create PaymentIntent for service',
+        error.stack,
+      );
       throw error;
     }
   }
 
-  // // Refunds (Process Refund)
-  // async refundPayment(paymentIntentId: string): Promise<Stripe.Refund> {
-  //   try {
-  //     const refund = await this.stripe.refunds.create({
-  //       payment_intent: paymentIntentId,
-  //     });
-  //     this.logger.log(
-  //       `Refund processed successfully for PaymentIntent: ${paymentIntentId}`,
-  //     );
-  //     return refund;
-  //   } catch (error) {
-  //     this.logger.error('Failed to process refund', error.stack);
-  //     throw error;
-  //   }
-  // }
+  async handleWebhook(body: Buffer, signature: string) {
+    const endpointSecret = this.configService.get('STRIPE_WEBHOOK_SECRET');
 
-  // // Payment Method Integration (Attach Payment Method)
-  // async attachPaymentMethod(
-  //   customerId: string,
-  //   paymentMethodId: string,
-  // ): Promise<void> {
-  //   try {
-  //     await this.stripe.paymentMethods.attach(paymentMethodId, {
-  //       customer: customerId,
-  //     });
-  //     this.logger.log(
-  //       `Payment method ${paymentMethodId} attached to customer ${customerId}`,
-  //     );
-  //   } catch (error) {
-  //     this.logger.error('Failed to attach payment method', error.stack);
-  //     throw error;
-  //   }
-  // }
+    if (!endpointSecret) {
+      this.logger.error('STRIPE_WEBHOOK_SECRET is not configured');
+      throw new Error('Webhook endpoint secret not configured');
+    }
 
-  // // Reports and Analytics (Retrieve Balance)
-  // async getBalance(): Promise<Stripe.Balance> {
-  //   try {
-  //     const balance = await this.stripe.balance.retrieve();
-  //     this.logger.log('Balance retrieved successfully');
-  //     return balance;
-  //   } catch (error) {
-  //     this.logger.error('Failed to retrieve balance', error.stack);
-  //     throw error;
-  //   }
-  // }
+    try {
+      const event = this.webhookService.verifyWebhookSignature(
+        body,
+        signature,
+        endpointSecret,
+      );
 
-  // // Payment Links
-  // async createPaymentLink(priceId: string): Promise<Stripe.PaymentLink> {
-  //   try {
-  //     const paymentLink = await this.stripe.paymentLinks.create({
-  //       line_items: [{ price: priceId, quantity: 1 }],
-  //     });
-  //     this.logger.log('Payment link created successfully');
-  //     return paymentLink;
-  //   } catch (error) {
-  //     this.logger.error('Failed to create payment link', error.stack);
-  //     throw error;
-  //   }
-  // }
+      const result = await this.webhookService.processWebhookEvent(event);
 
-  // async createSubscription(
-  //   customerId: string,
-  //   priceId: string,
-  // ): Promise<Stripe.Subscription> {
-  //   try {
-  //     const subscription = await this.stripe.subscriptions.create({
-  //       customer: customerId,
-  //       items: [{ price: priceId }],
-  //     });
-  //     this.logger.log(
-  //       `Subscription created successfully for customer ${customerId}`,
-  //     );
-  //     return subscription;
-  //   } catch (error) {
-  //     this.logger.error('Failed to create subscription', error.stack);
-  //     throw error;
-  //   }
-  // }
+      await this.webhookService.logWebhookEvent(event, result);
 
+      if (result.success) {
+        this.logger.log(`Webhook processed successfully: ${result.message}`);
+        return { received: true, message: result.message };
+      } else {
+        this.logger.error(`Webhook processing failed: ${result.message}`);
+        return {
+          received: false,
+          error: result.error || result.message,
+        };
+      }
+    } catch (error) {
+      this.logger.error('Webhook handler error:', error.stack);
+      throw error;
+    }
+  }
 }
