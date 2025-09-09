@@ -6,6 +6,7 @@ import { OrdersService } from 'src/orders/orders.service';
 import { WebhookErrorHandlerService } from './webhook-error-handler.service';
 import {
   PaymentIntentMetadata,
+  CheckoutSessionMetadata,
   WebhookProcessingResult,
 } from './dto/webhook-event.dto';
 
@@ -99,6 +100,16 @@ export class WebhookService {
         case 'customer.subscription.deleted':
           return await this.handleSubscriptionDeleted(
             event.data.object as Stripe.Subscription,
+          );
+
+        case 'checkout.session.completed':
+          return await this.handleCheckoutSessionCompleted(
+            event.data.object as Stripe.Checkout.Session,
+          );
+
+        case 'checkout.session.expired':
+          return await this.handleCheckoutSessionExpired(
+            event.data.object as Stripe.Checkout.Session,
           );
 
         default:
@@ -348,6 +359,121 @@ export class WebhookService {
     if (!result.success && result.error) {
       this.logger.error(`Error: ${result.error}`);
     }
+  }
+
+  private async handleCheckoutSessionCompleted(
+    session: Stripe.Checkout.Session,
+  ): Promise<WebhookProcessingResult> {
+    const metadata = session.metadata as CheckoutSessionMetadata;
+
+    this.logger.log(`Checkout session completed: ${session.id}`);
+    this.logger.log(`Payment status: ${session.payment_status}`);
+    this.logger.log(`Metadata: ${JSON.stringify(metadata, null, 2)}`);
+
+    if (session.payment_status === 'paid') {
+      // Handle order payment success
+      if (metadata.order_id) {
+        const orderId = parseInt(metadata.order_id);
+        await this.ordersService.updateOrderStatus(orderId, {
+          status: 'processing',
+          notes: `Payment successful via Checkout Session: ${session.id}`,
+        });
+
+        if (metadata.cartId) {
+          await this.clearCart(parseInt(metadata.cartId));
+        }
+
+        return {
+          success: true,
+          message: `Order ${orderId} payment processed successfully via checkout session`,
+          orderId: metadata.order_id,
+        };
+      }
+
+      // Handle service booking payment success
+      if (metadata.service_id || metadata.booking_id || metadata.booking_ids) {
+        return this.handleBookingCheckoutSessionSuccess(session, metadata);
+      }
+    }
+
+    return {
+      success: true,
+      message: 'Checkout session processed but no specific action taken',
+    };
+  }
+
+  private async handleCheckoutSessionExpired(
+    session: Stripe.Checkout.Session,
+  ): Promise<WebhookProcessingResult> {
+    const metadata = session.metadata as CheckoutSessionMetadata;
+
+    this.logger.warn(`Checkout session expired: ${session.id}`);
+
+    // Handle order cancellation due to session expiry
+    if (metadata.order_id) {
+      const orderId = parseInt(metadata.order_id);
+      await this.ordersService.updateOrderStatus(orderId, {
+        status: 'cancelled',
+        notes: `Payment session expired. Session: ${session.id}`,
+      });
+
+      return {
+        success: true,
+        message: `Order ${orderId} cancelled due to session expiry`,
+        orderId: metadata.order_id,
+      };
+    }
+
+    return {
+      success: true,
+      message: 'Checkout session expiry processed',
+    };
+  }
+
+  private async handleBookingCheckoutSessionSuccess(
+    session: Stripe.Checkout.Session,
+    metadata: CheckoutSessionMetadata,
+  ): Promise<WebhookProcessingResult> {
+    // Handle booking by database ID
+    if (metadata.booking_id) {
+      const bookingId = parseInt(metadata.booking_id);
+      await this.prisma.booking.update({
+        where: { id: bookingId },
+        data: { is_bought: true, status: 'confirmed' },
+      });
+      return {
+        success: true,
+        message: `Booking ${bookingId} payment processed successfully via checkout session`,
+        bookingId: metadata.booking_id,
+      };
+    }
+
+    // Handle booking by booking_ids string
+    if (metadata.service_id || metadata.booking_ids) {
+      const bookingIds = metadata.booking_ids || metadata.service_id;
+      const booking = await this.prisma.booking.findFirst({
+        where: { booking_ids: bookingIds },
+      });
+
+      if (booking) {
+        await this.prisma.booking.update({
+          where: { id: booking.id },
+          data: { is_bought: true, status: 'confirmed' },
+        });
+        return {
+          success: true,
+          message: `Booking ${booking.booking_ids} payment processed successfully via checkout session`,
+          bookingId: String(booking.id),
+        };
+      } else {
+        this.logger.warn(`No booking found with booking_ids: ${bookingIds}`);
+      }
+    }
+
+    return {
+      success: true,
+      message: 'Service checkout session processed but no booking identifier found',
+    };
   }
 
   private async checkExistingWebhookEvent(eventId: string): Promise<boolean> {

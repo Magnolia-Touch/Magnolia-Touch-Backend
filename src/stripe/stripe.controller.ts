@@ -4,7 +4,9 @@ import { UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/common/decoraters/roles.guard';
 import { CheckoutDto } from './dto/checkout.dto';
+import { CheckoutSessionDto } from './dto/checkout-session.dto';
 import { ServiceBookingDto } from './dto/service-booking.dto';
+import { ServiceCheckoutSessionDto } from './dto/service-checkout-session.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 @Controller('stripe')
@@ -56,6 +58,51 @@ export class StripeController {
       currency,
       booking.booking_ids,
       email,
+      booking_id,
+    );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('create-checkout-session')
+  async createCheckoutSession(
+    @Body() checkoutSessionDto: CheckoutSessionDto,
+    @Request() req,
+  ) {
+    const { email, id } = req.user;
+    const { productId, quantity, cartId } = checkoutSessionDto;
+
+    return this.stripeService.createCheckoutSessionforProduct(
+      checkoutSessionDto,
+      email,
+      id,
+      productId,
+      quantity,
+      cartId,
+    );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('create-service-checkout-session')
+  async createServiceCheckoutSession(
+    @Body() serviceCheckoutSessionDto: ServiceCheckoutSessionDto,
+    @Request() req,
+  ) {
+    const { email } = req.user;
+    const { amount, currency, booking_id } = serviceCheckoutSessionDto;
+
+    // Get booking details to generate booking_ids
+    const booking = await this.prisma.booking.findUnique({
+      where: { id: booking_id }
+    });
+    
+    if (!booking) {
+      throw new Error('Booking not found');
+    }
+
+    return this.stripeService.createCheckoutSessionforService(
+      serviceCheckoutSessionDto,
+      email,
+      booking.booking_ids,
       booking_id,
     );
   }

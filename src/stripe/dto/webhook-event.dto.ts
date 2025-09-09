@@ -48,6 +48,21 @@ export interface PaymentIntentMetadata {
   description?: string;
 }
 
+export interface CheckoutSessionMetadata {
+  order_id?: string;
+  orderNumber?: string;
+  user_email?: string;
+  user_id?: string;
+  service_id?: string;
+  booking_id?: string;
+  booking_ids?: string;
+  product_id?: string;
+  product_name?: string;
+  price?: string;
+  cartId?: string;
+  description?: string;
+}
+
 export interface WebhookProcessingResult {
   success: boolean;
   message: string;
