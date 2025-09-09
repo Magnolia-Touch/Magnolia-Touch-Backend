@@ -317,8 +317,8 @@ export class StripeService {
         payment_method_types: ['card'],
         line_items,
         mode: 'payment',
-        success_url: successUrl + '?session_id={CHECKOUT_SESSION_ID}',
-        cancel_url: cancelUrl,
+        success_url: successUrl + '?session_id={CHECKOUT_SESSION_ID}&booking_id=' + booking_id,
+        cancel_url: cancelUrl + '?booking_id=' + booking_id,
         customer_email: user_email,
         metadata: {
           service_id: booking_ids,
@@ -337,6 +337,65 @@ export class StripeService {
     } catch (error) {
       this.logger.error(
         'Failed to create Checkout Session for service',
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
+  async getCheckoutSessionById(sessionId: string): Promise<Stripe.Checkout.Session | null> {
+    try {
+      const session = await this.stripe.checkout.sessions.retrieve(sessionId);
+      return session;
+    } catch (error) {
+      this.logger.error(`Failed to retrieve checkout session ${sessionId}:`, error.stack);
+      return null;
+    }
+  }
+
+  async createCheckoutLinkForExistingBooking(
+    booking: any,
+    user_email: string,
+    successUrl: string,
+    cancelUrl: string,
+  ): Promise<Stripe.Checkout.Session> {
+    try {
+      const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] = [{
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: 'Memorial Cleaning Service',
+            description: `Cleaning service for ${booking.name_on_memorial} at ${booking.plot_no}`,
+          },
+          unit_amount: Math.round(booking.amount * 100),
+        },
+        quantity: 1,
+      }];
+
+      const session = await this.stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items,
+        mode: 'payment',
+        success_url: successUrl + '?session_id={CHECKOUT_SESSION_ID}&booking_id=' + booking.id,
+        cancel_url: cancelUrl + '?booking_id=' + booking.id,
+        customer_email: user_email,
+        metadata: {
+          service_id: booking.booking_ids,
+          booking_id: String(booking.id),
+          booking_ids: booking.booking_ids,
+          order_id: generateOrderIdforService(),
+          description: 'Payment for Memorial Cleaning Service',
+          user_email,
+        },
+      });
+      
+      this.logger.log(
+        `Checkout Session created for existing booking ${booking.booking_ids} with amount: ${booking.amount} USD`,
+      );
+      return session;
+    } catch (error) {
+      this.logger.error(
+        'Failed to create Checkout Session for existing booking',
         error.stack,
       );
       throw error;

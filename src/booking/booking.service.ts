@@ -5,6 +5,7 @@ import { StripeService } from "src/stripe/stripe.service";
 import { generateOrderIdforService } from "src/utils/code-generator.util";
 import { ChurchService } from "src/church/church.service";
 import { UpdateBookingstatusDto } from "./dto/update-booking.dto";
+import { CheckoutSessionLinkDto, BookingWithCheckoutDto, CreateBookingResponseDto } from "./dto/checkout-session-response.dto";
 
 @Injectable()
 export class BookingService {
@@ -16,8 +17,10 @@ export class BookingService {
   async createBooking(
     bookingdto: CreateBookingDto,
     user_Id: number,
-    user_email: string
-  ) {
+    user_email: string,
+    successUrl?: string,
+    cancelUrl?: string
+  ): Promise<CreateBookingResponseDto> {
     const { name_on_memorial, plot_no, first_cleaning_date, second_cleaning_date, anniversary_date, no_of_subsribe_years, church_name, city, state, subscription_id, flower_id } = bookingdto;
 
     const first_date = new Date(first_cleaning_date);
@@ -63,15 +66,32 @@ export class BookingService {
         is_bought: false,
       },
     });
-    const paymentIntent = await this.stipeservice.createPaymentIntentforService(amount, 'usd', booking.booking_ids, user_email, booking.id);
 
+    // Create checkout session instead of payment intent
+    const checkoutSession = await this.stipeservice.createCheckoutLinkForExistingBooking(
+      booking,
+      user_email,
+      successUrl || `${process.env.FRONTEND_URL}/booking/success`,
+      cancelUrl || `${process.env.FRONTEND_URL}/booking/cancel`
+    );
+
+    const bookingWithCheckout: BookingWithCheckoutDto = {
+      id: booking.id,
+      booking_ids: booking.booking_ids,
+      name_on_memorial: booking.name_on_memorial,
+      plot_no: booking.plot_no,
+      amount: booking.amount,
+      status: booking.status,
+      is_bought: booking.is_bought,
+      checkout_url: checkoutSession.url!,
+      session_id: checkoutSession.id,
+      payment_status: checkoutSession.payment_status || 'pending',
+      expires_at: checkoutSession.expires_at ? new Date(checkoutSession.expires_at * 1000).toISOString() : undefined,
+    };
 
     return {
-      message: 'Booking created successfully',
-      data: {
-        booking,
-        paymentIntent
-      },
+      message: 'Booking created successfully with checkout link',
+      booking: bookingWithCheckout,
       status: HttpStatus.OK,
     };
   }
@@ -83,6 +103,108 @@ export class BookingService {
         status: updatecleaningstatus.status, // ✅ now valid
       },
     })
+  }
+
+  async getUserCheckoutLinks(
+    user_id: number,
+    user_email: string,
+    successUrl?: string,
+    cancelUrl?: string
+  ): Promise<CheckoutSessionLinkDto[]> {
+    // Get all user bookings
+    const userBookings = await this.prisma.booking.findMany({
+      where: { User_id: user_id },
+      include: {
+        Church: true,
+        subscription: true,
+        flower: true,
+      },
+      orderBy: { booking_date: 'desc' },
+    });
+
+    const checkoutLinks: CheckoutSessionLinkDto[] = [];
+
+    for (const booking of userBookings) {
+      try {
+        // Create or retrieve checkout session for this booking
+        const checkoutSession = await this.stipeservice.createCheckoutLinkForExistingBooking(
+          booking,
+          user_email,
+          successUrl || `${process.env.FRONTEND_URL}/booking/success`,
+          cancelUrl || `${process.env.FRONTEND_URL}/booking/cancel`
+        );
+
+        checkoutLinks.push({
+          checkout_url: checkoutSession.url!,
+          session_id: checkoutSession.id,
+          booking_id: booking.id,
+          booking_ids: booking.booking_ids,
+          amount: booking.amount,
+          currency: 'usd',
+          status: booking.status,
+          payment_status: checkoutSession.payment_status || 'pending',
+          expires_at: checkoutSession.expires_at 
+            ? new Date(checkoutSession.expires_at * 1000).toISOString() 
+            : undefined,
+        });
+      } catch (error) {
+        console.error(`Failed to create checkout link for booking ${booking.id}:`, error);
+        // Continue with other bookings even if one fails
+      }
+    }
+
+    return checkoutLinks;
+  }
+
+  async getBookingWithCheckoutLink(
+    booking_id: number,
+    user_id: number,
+    user_email: string,
+    successUrl?: string,
+    cancelUrl?: string
+  ): Promise<BookingWithCheckoutDto | null> {
+    const booking = await this.prisma.booking.findFirst({
+      where: { 
+        id: booking_id,
+        User_id: user_id 
+      },
+      include: {
+        Church: true,
+        subscription: true,
+        flower: true,
+      },
+    });
+
+    if (!booking) {
+      return null;
+    }
+
+    try {
+      const checkoutSession = await this.stipeservice.createCheckoutLinkForExistingBooking(
+        booking,
+        user_email,
+        successUrl || `${process.env.FRONTEND_URL}/booking/success`,
+        cancelUrl || `${process.env.FRONTEND_URL}/booking/cancel`
+      );
+
+      return {
+        id: booking.id,
+        booking_ids: booking.booking_ids,
+        name_on_memorial: booking.name_on_memorial,
+        plot_no: booking.plot_no,
+        amount: booking.amount,
+        status: booking.status,
+        is_bought: booking.is_bought,
+        checkout_url: checkoutSession.url!,
+        session_id: checkoutSession.id,
+        payment_status: checkoutSession.payment_status || 'pending',
+        expires_at: checkoutSession.expires_at 
+          ? new Date(checkoutSession.expires_at * 1000).toISOString() 
+          : undefined,
+      };
+    } catch (error) {
+      throw new Error(`Failed to create checkout link for booking: ${error.message}`);
+    }
   }
 
   // ##need to connect stripe webhook to confirm payment and thereafter booking

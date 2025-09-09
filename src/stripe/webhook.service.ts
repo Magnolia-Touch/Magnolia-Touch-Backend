@@ -460,10 +460,15 @@ export class WebhookService {
           where: { id: booking.id },
           data: { is_bought: true, status: 'confirmed' },
         });
+        
+        // Log successful booking payment for redirect
+        this.logger.log(`Booking payment successful - User should be redirected to bookings page for booking ID: ${booking.id}`);
+        
         return {
           success: true,
-          message: `Booking ${booking.booking_ids} payment processed successfully via checkout session`,
+          message: `Booking ${booking.booking_ids} payment processed successfully via checkout session - redirecting to bookings`,
           bookingId: String(booking.id),
+          redirectTo: 'bookings', // Add redirect indicator
         };
       } else {
         this.logger.warn(`No booking found with booking_ids: ${bookingIds}`);

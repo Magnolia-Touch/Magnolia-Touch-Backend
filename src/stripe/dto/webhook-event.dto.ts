@@ -69,4 +69,5 @@ export interface WebhookProcessingResult {
   orderId?: string;
   bookingId?: string;
   error?: string;
+  redirectTo?: string; // Add redirect destination indicator
 }
