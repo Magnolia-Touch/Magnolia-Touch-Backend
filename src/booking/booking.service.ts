@@ -14,6 +14,23 @@ export class BookingService {
     private churchservice: ChurchService
   ) { }
 
+  private ensureHttpsUrl(url: string): string {
+    if (!url) return url;
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    return `https://${url}`;
+  }
+
+  private getDefaultUrl(path: string): string {
+    const frontendUrl = process.env.FRONTEND_URL;
+    if (!frontendUrl) {
+      throw new Error('FRONTEND_URL environment variable is not set');
+    }
+    const baseUrl = this.ensureHttpsUrl(frontendUrl);
+    return `${baseUrl}${path}`;
+  }
+
   async createBooking(
     bookingdto: CreateBookingDto,
     user_Id: number,
@@ -71,8 +88,8 @@ export class BookingService {
     const checkoutSession = await this.stipeservice.createCheckoutLinkForExistingBooking(
       booking,
       user_email,
-      successUrl || `${process.env.FRONTEND_URL}/booking/success`,
-      cancelUrl || `${process.env.FRONTEND_URL}/booking/cancel`
+      successUrl || this.getDefaultUrl('/booking/success'),
+      cancelUrl || this.getDefaultUrl('/booking/cancel')
     );
 
     const bookingWithCheckout: BookingWithCheckoutDto = {
@@ -130,8 +147,8 @@ export class BookingService {
         const checkoutSession = await this.stipeservice.createCheckoutLinkForExistingBooking(
           booking,
           user_email,
-          successUrl || `${process.env.FRONTEND_URL}/booking/success`,
-          cancelUrl || `${process.env.FRONTEND_URL}/booking/cancel`
+          successUrl || this.getDefaultUrl('/booking/success'),
+          cancelUrl || this.getDefaultUrl('/booking/cancel')
         );
 
         checkoutLinks.push({
@@ -183,8 +200,8 @@ export class BookingService {
       const checkoutSession = await this.stipeservice.createCheckoutLinkForExistingBooking(
         booking,
         user_email,
-        successUrl || `${process.env.FRONTEND_URL}/booking/success`,
-        cancelUrl || `${process.env.FRONTEND_URL}/booking/cancel`
+        successUrl || this.getDefaultUrl('/booking/success'),
+        cancelUrl || this.getDefaultUrl('/booking/cancel')
       );
 
       return {

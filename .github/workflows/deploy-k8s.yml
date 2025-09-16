@@ -1,0 +1,126 @@
+name: Deploy to Kubernetes
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+      image_tag:
+        required: true
+        type: string
+      namespace:
+        required: false
+        type: string
+        default: default
+    secrets:
+      KUBE_CONFIG:
+        required: true
+      DATABASE_URL:
+        required: true
+      JWT_SECRET:
+        required: true
+      STRIPE_SECRET_KEY:
+        required: true
+      STRIPE_WEBHOOK_SECRET:
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'v1.28.0'
+
+    - name: Configure kubectl
+      run: |
+        mkdir -p ~/.kube
+        echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > ~/.kube/config
+        chmod 600 ~/.kube/config
+
+    - name: Create/Update Kubernetes secrets
+      run: |
+        kubectl create secret generic magnolia-secrets \
+          --from-literal=DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+          --from-literal=JWT_SECRET="${{ secrets.JWT_SECRET }}" \
+          --from-literal=STRIPE_SECRET_KEY="${{ secrets.STRIPE_SECRET_KEY }}" \
+          --from-literal=STRIPE_WEBHOOK_SECRET="${{ secrets.STRIPE_WEBHOOK_SECRET }}" \
+          --namespace=${{ inputs.namespace }} \
+          --dry-run=client -o yaml | kubectl apply -f -
+
+    - name: Deploy to Kubernetes
+      run: |
+        # Update the deployment with new image
+        kubectl set image deployment/magnolia-app \
+          magnolia-app=${{ inputs.image_tag }} \
+          --namespace=${{ inputs.namespace }}
+
+        # Wait for rollout to complete
+        kubectl rollout status deployment/magnolia-app \
+          --namespace=${{ inputs.namespace }} \
+          --timeout=600s
+
+    - name: Run database migrations
+      run: |
+        # Create a job for running migrations
+        cat <<EOF | kubectl apply -f -
+        apiVersion: batch/v1
+        kind: Job
+        metadata:
+          name: magnolia-migrate-$(date +%s)
+          namespace: ${{ inputs.namespace }}
+        spec:
+          template:
+            spec:
+              containers:
+              - name: migrate
+                image: ${{ inputs.image_tag }}
+                command: ["npx", "prisma", "db", "push"]
+                envFrom:
+                - secretRef:
+                    name: magnolia-secrets
+              restartPolicy: Never
+          backoffLimit: 3
+        EOF
+
+    - name: Verify deployment
+      run: |
+        # Wait for pods to be ready
+        kubectl wait --for=condition=ready pod \
+          --selector=app=magnolia-app \
+          --namespace=${{ inputs.namespace }} \
+          --timeout=300s
+
+        # Get service endpoint and test health
+        SERVICE_IP=$(kubectl get service magnolia-service \
+          --namespace=${{ inputs.namespace }} \
+          -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+        
+        if [ -z "$SERVICE_IP" ]; then
+          SERVICE_IP=$(kubectl get service magnolia-service \
+            --namespace=${{ inputs.namespace }} \
+            -o jsonpath='{.spec.clusterIP}')
+        fi
+
+        # Health check
+        kubectl run curl-test --image=curlimages/curl --rm -it --restart=Never \
+          --namespace=${{ inputs.namespace }} \
+          -- curl -f "http://${SERVICE_IP}:3000/health" || exit 1
+
+        echo "✅ Kubernetes deployment verification successful!"
+
+    - name: Cleanup old ReplicaSets
+      run: |
+        # Keep only the 3 most recent ReplicaSets
+        kubectl get replicasets \
+          --namespace=${{ inputs.namespace }} \
+          --selector=app=magnolia-app \
+          --sort-by=.metadata.creationTimestamp \
+          -o name | head -n -3 | xargs -r kubectl delete --namespace=${{ inputs.namespace }}
