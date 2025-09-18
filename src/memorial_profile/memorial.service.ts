@@ -1,15 +1,18 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { S3Service } from '../s3/s3.service';
 import { CreateDeadPersonProfileDto } from './dto/memorial_profile.dto';
-import { CreateFamilyMemberDto} from './dto/create-family.dto';
+import { CreateFamilyMemberDto } from './dto/create-family.dto';
 import { CreateGuestBookDto } from './dto/create-guestbook.dto';
 import { generateCode } from 'src/utils/code-generator.util'; // adjust path if needed
 import { HttpStatus } from '@nestjs/common';
-import { CreateGalleryDto } from './dto/create-gallery.dto';
 
 @Injectable()
 export class MemorialProfileService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private s3Service: S3Service
+  ) { }
 
   //Create profile for Dead Person
   async create(dto: Partial<CreateDeadPersonProfileDto>, email: string) {
@@ -18,7 +21,7 @@ export class MemorialProfileService {
     });
 
     if (!user) {
-       throw new NotFoundException('User not found');
+      throw new NotFoundException('User not found');
     }
     let uniqueSlug = '';
     let isUnique = false;
@@ -58,7 +61,7 @@ export class MemorialProfileService {
         deadPersonProfiles: uniqueSlug
       }
     })
-    return {profile, biography, gallery, family, guestbook};
+    return { profile, biography, gallery, family, guestbook };
 
   }
 
@@ -82,8 +85,25 @@ export class MemorialProfileService {
   }
 
 
-  async addGuestbook(slug: string, dto: CreateGuestBookDto) {
-    const { first_name, last_name, guestemail, phone, message, photo_upload } = dto;
+  async addGuestbook(slug: string, dto: CreateGuestBookDto, image: Express.Multer.File) {
+    const { first_name, last_name, guestemail, phone, message } = dto;
+    
+    let imageUrl: string | null = null;
+    if (image) {
+      // Upload image to S3
+      const allowedImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      if (!this.s3Service.validateFileType(image, allowedImageTypes)) {
+        throw new BadRequestException('Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed.');
+      }
+      
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (!this.s3Service.validateFileSize(image, maxSize)) {
+        throw new BadRequestException('File size too large. Maximum size is 5MB.');
+      }
+      
+      imageUrl = await this.s3Service.uploadFile(image, `guestbook/${slug}/images`);
+    }
+    
     const date = new Date().toISOString(); // Get current date in ISO format
     const profile = await this.prisma.deadPersonProfile.findUnique({
       where: { slug },
@@ -94,17 +114,17 @@ export class MemorialProfileService {
     if (!profile || !profile.guestBook.length) {
       throw new NotFoundException('Guestbook not found for this profile');
     }
-    
-    const guestbook_id = profile.guestBook[0].guestbook_id; 
+
+    const guestbook_id = profile.guestBook[0].guestbook_id;
     const created = await this.prisma.guestBookItems.create({
       data: {
         guestbook_id: guestbook_id,
         first_name: first_name,
         last_name: last_name,
-        email:guestemail,
+        email: guestemail,
         message: message,
-        phone:phone,
-        photo_upload: photo_upload,
+        phone: phone,
+        photo_upload: imageUrl,
         date: date,
         is_approved: false
       },
@@ -142,7 +162,7 @@ export class MemorialProfileService {
     const profile = await this.prisma.deadPersonProfile.findUnique({
       where: { slug }
     });
-    
+
     if (!profile) {
       throw new NotFoundException('Profile not found');
     }
@@ -176,7 +196,7 @@ export class MemorialProfileService {
         gallery: true,
       },
     });
-    
+
     if (!profile || !profile.gallery.length) {
       throw new NotFoundException('Gallery not found for this profile');
     }
@@ -201,7 +221,7 @@ export class MemorialProfileService {
         is_approved: true,
       },
     })
-    
+
     return {
       message: 'GuestMessage Approved Succesfully',
       status: HttpStatus.OK,
@@ -215,7 +235,7 @@ export class MemorialProfileService {
         gallery: true,
       },
     });
-    
+
     if (!profile || !profile.gallery.length) {
       throw new NotFoundException('Gallery not found for this profile');
     }
@@ -231,15 +251,33 @@ export class MemorialProfileService {
     if (!guestbook) {
       throw new NotFoundException('Guestbook not found for this profile');
     }
+
+    // Get the guestbook item to delete photo from S3
+    const guestbookItem = await this.prisma.guestBookItems.findUnique({
+      where: {
+        guestbookitems_id: id,
+        guestbook_id: guestbook.guestbook_id,
+      },
+    });
+
+    if (guestbookItem && guestbookItem.photo_upload) {
+      // Delete photo from S3 if it exists
+      try {
+        await this.s3Service.deleteFile(guestbookItem.photo_upload);
+      } catch (error) {
+        console.warn('Failed to delete guestbook photo from S3:', error.message);
+      }
+    }
+
     await this.prisma.guestBookItems.delete({
       where: {
         guestbookitems_id: id,
         guestbook_id: guestbook.guestbook_id,
       },
     })
-    
+
     return {
-      message: 'Profile Deleted successfully',
+      message: 'GuestBook item deleted successfully',
       status: HttpStatus.OK,
     };
   }
@@ -277,11 +315,11 @@ export class MemorialProfileService {
       greatGrandParents: 'greatGrandParents',
       pets: 'pets',
       childrens: 'childrens',
-      spouse:'spouse',
-      friends:'friends',
-      cousins:'cousins',
-      siblings:'siblings',
-      parents:'parents'
+      spouse: 'spouse',
+      friends: 'friends',
+      cousins: 'cousins',
+      siblings: 'siblings',
+      parents: 'parents'
     }[relation] ?? relation; // keep consistent for special cases
     const modelName = model.charAt(0).toUpperCase() + model.slice(1);
     // Create the family member using the appropriate model
@@ -381,7 +419,7 @@ export class MemorialProfileService {
 
 
   async updateFamilybyId(email: string, slug: string, relation: string, id: number, dto: CreateFamilyMemberDto) {
-    const {name} = dto
+    const { name } = dto
     const profile = await this.prisma.deadPersonProfile.findUnique({
       where: { slug }
     });
@@ -428,8 +466,8 @@ export class MemorialProfileService {
     return { message: `${relation} updated successfully`, updated };
   }
 
-  
-  async deleteFamilybyId(email:string, slug: string, relation: string, id: number) {
+
+  async deleteFamilybyId(email: string, slug: string, relation: string, id: number) {
     const profile = await this.prisma.deadPersonProfile.findUnique({
       where: { slug }
     });
@@ -444,8 +482,8 @@ export class MemorialProfileService {
       where: { deadPersonProfiles: slug },
     });
     if (!family) {
-     throw new NotFoundException('Family not found for the provided slug');
-      
+      throw new NotFoundException('Family not found for the provided slug');
+
     }
     const relationMap: Record<string, string> = {
       parents: 'parents',
@@ -474,52 +512,19 @@ export class MemorialProfileService {
   }
 
 
-  async addGalleryItems(email: string, slug: string, mediatype: string, dto: CreateGalleryDto) {
-    const { link } = dto;
-    const profile = await this.prisma.deadPersonProfile.findUnique({
-      where: { slug },
-      include: {
-        gallery: true,
-      },
-    });
-    if (!profile || !profile.gallery.length) {
-      throw new NotFoundException('Gallery not found for this profile');
+  // This method is deprecated - use uploadMedia instead
+  async addGalleryItems(email: string, slug: string, mediatype: string, image: Express.Multer.File) {
+    // Redirect to the new S3-integrated method
+    if (mediatype === 'photos' || mediatype === 'videos') {
+      return this.uploadMedia(email, slug, mediatype, image);
+    } else if (mediatype === 'links') {
+      throw new BadRequestException('Links cannot be uploaded as files. Please use a different endpoint to add link URLs.');
+    } else {
+      throw new BadRequestException(`Invalid mediatype: ${mediatype}`);
     }
-    if (email != profile.owner_id) {
-      throw new ForbiddenException('You are not authorized to view this guestbook');
-    }
-    const gallery_id = profile.gallery[0].gallery_id; // assuming one-to-one family
-    // Validate relation to prevent arbitrary table access
-    const validRelations = [
-      'links', 'photos', 'videos'
-    ];
-    if (!validRelations.includes(mediatype)) {
-      throw new BadRequestException(`Invalid Mediatype: ${mediatype}`);
-    }
-    // Construct Prisma model name dynamically (capitalize first letter)
-    const model = {
-      nieceAndNephew: 'links',
-      grandchildrens: 'photos',
-      grandparents: 'videos',
-
-    }[mediatype] ?? mediatype; // keep consistent for special cases
-    const modelName = model.charAt(0).toUpperCase() + model.slice(1);
-    // Create the family member using the appropriate model
-    const created = await this.prisma[modelName].create({
-      data: {
-        url: link,
-        gallery_id,
-        deadPersonProfiles: slug,
-      },
-    });
-    return {
-      message: `${modelName} entry added`,
-      data: created,
-      status: HttpStatus.CREATED,
-    };
   }
 
-  
+
   async getGallery(slug: string) {
     const profile = await this.prisma.deadPersonProfile.findUnique({
       where: { slug },
@@ -581,6 +586,25 @@ export class MemorialProfileService {
     if (!modelName || !idField) {
       throw new BadRequestException(`Invalid Mediatype: ${mediatype}`);
     }
+
+    // Get the media item to delete from S3
+    const mediaItem = await this.prisma[modelName].findUnique({
+      where: {
+        [idField]: id,
+        gallery_id,
+      } as any,
+    });
+
+    if (mediaItem && mediaItem.url) {
+      // Delete from S3 if it's an S3 URL
+      try {
+        await this.s3Service.deleteFile(mediaItem.url);
+      } catch (error) {
+        console.warn('Failed to delete from S3:', error.message);
+      }
+    }
+
+    // Delete from database
     await this.prisma[modelName].delete({
       where: {
         [idField]: id,
@@ -590,6 +614,245 @@ export class MemorialProfileService {
     return {
       message: `${mediatype} item with ID ${id} deleted successfully.`,
       status: HttpStatus.OK,
+    };
+  }
+
+  // New S3-integrated methods
+  async uploadProfileImage(email: string, slug: string, type: 'profile' | 'background', file: Express.Multer.File) {
+    // Validate file type
+    const allowedImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!this.s3Service.validateFileType(file, allowedImageTypes)) {
+      throw new BadRequestException('Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed.');
+    }
+
+    // Validate file size (5MB limit)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (!this.s3Service.validateFileSize(file, maxSize)) {
+      throw new BadRequestException('File size too large. Maximum size is 5MB.');
+    }
+
+    // Check if user owns the profile
+    const profile = await this.prisma.deadPersonProfile.findUnique({
+      where: { slug }
+    });
+    if (!profile) {
+      throw new NotFoundException('Profile not found');
+    }
+    if (email !== profile.owner_id) {
+      throw new ForbiddenException('You are not authorized to update this profile');
+    }
+
+    // Upload to S3
+    const folder = `profiles/${slug}/${type}-images`;
+    const imageUrl = await this.s3Service.uploadFile(file, folder);
+
+    // Delete old image from S3 if it exists
+    const oldImageUrl = type === 'profile' ? profile.profile_image : profile.background_image;
+    if (oldImageUrl) {
+      try {
+        await this.s3Service.deleteFile(oldImageUrl);
+      } catch (error) {
+        console.warn('Failed to delete old image from S3:', error.message);
+      }
+    }
+
+    // Update profile with new image URL
+    const updateData = type === 'profile'
+      ? { profile_image: imageUrl }
+      : { background_image: imageUrl };
+
+    const updatedProfile = await this.prisma.deadPersonProfile.update({
+      where: { slug },
+      data: updateData,
+    });
+
+    return {
+      message: `${type === 'profile' ? 'Profile' : 'Background'} image uploaded successfully`,
+      data: { imageUrl, profile: updatedProfile },
+      status: HttpStatus.OK,
+    };
+  }
+
+  async uploadMedia(email: string, slug: string, mediatype: string, file: Express.Multer.File) {
+    // Validate mediatype
+    const validMediaTypes = ['photos', 'videos'];
+    if (!validMediaTypes.includes(mediatype.toLowerCase())) {
+      throw new BadRequestException('Invalid mediatype. Only photos and videos are supported for file uploads.');
+    }
+
+    // Validate file type based on mediatype
+    let allowedTypes: string[];
+    if (mediatype.toLowerCase() === 'photos') {
+      allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    } else {
+      allowedTypes = ['video/mp4', 'video/avi', 'video/mov', 'video/wmv', 'video/flv'];
+    }
+
+    if (!this.s3Service.validateFileType(file, allowedTypes)) {
+      throw new BadRequestException(`Invalid file type for ${mediatype}.`);
+    }
+
+    // Validate file size (50MB for videos, 10MB for photos)
+    const maxSize = mediatype.toLowerCase() === 'videos' ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
+    if (!this.s3Service.validateFileSize(file, maxSize)) {
+      throw new BadRequestException(`File size too large. Maximum size is ${mediatype.toLowerCase() === 'videos' ? '50MB' : '10MB'}.`);
+    }
+
+    // Check authorization
+    const profile = await this.prisma.deadPersonProfile.findUnique({
+      where: { slug },
+      include: { gallery: true },
+    });
+    if (!profile || !profile.gallery.length) {
+      throw new NotFoundException('Gallery not found for this profile');
+    }
+    if (email !== profile.owner_id) {
+      throw new ForbiddenException('You are not authorized to upload media to this profile');
+    }
+
+    // Upload to S3
+    const folder = `profiles/${slug}/gallery/${mediatype}`;
+    const mediaUrl = await this.s3Service.uploadFile(file, folder);
+
+    // Save to database
+    const gallery_id = profile.gallery[0].gallery_id;
+    const modelName = mediatype.charAt(0).toUpperCase() + mediatype.slice(1);
+
+    const created = await this.prisma[modelName].create({
+      data: {
+        url: mediaUrl,
+        gallery_id,
+        deadPersonProfiles: slug,
+      },
+    });
+
+    return {
+      message: `${mediatype} uploaded successfully`,
+      data: { mediaUrl, item: created },
+      status: HttpStatus.CREATED,
+    };
+  }
+
+  async uploadMultipleMedia(email: string, slug: string, mediatype: string, files: Express.Multer.File[]) {
+    if (!files || files.length === 0) {
+      throw new BadRequestException('No files provided');
+    }
+
+    // Validate mediatype
+    const validMediaTypes = ['photos', 'videos'];
+    if (!validMediaTypes.includes(mediatype.toLowerCase())) {
+      throw new BadRequestException('Invalid mediatype. Only photos and videos are supported for file uploads.');
+    }
+
+    // Check authorization
+    const profile = await this.prisma.deadPersonProfile.findUnique({
+      where: { slug },
+      include: { gallery: true },
+    });
+    if (!profile || !profile.gallery.length) {
+      throw new NotFoundException('Gallery not found for this profile');
+    }
+    if (email !== profile.owner_id) {
+      throw new ForbiddenException('You are not authorized to upload media to this profile');
+    }
+
+    // Validate all files
+    let allowedTypes: string[];
+    if (mediatype.toLowerCase() === 'photos') {
+      allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    } else {
+      allowedTypes = ['video/mp4', 'video/avi', 'video/mov', 'video/wmv', 'video/flv'];
+    }
+
+    const maxSize = mediatype.toLowerCase() === 'videos' ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
+
+    for (const file of files) {
+      if (!this.s3Service.validateFileType(file, allowedTypes)) {
+        throw new BadRequestException(`Invalid file type for ${file.originalname}. Expected ${mediatype}.`);
+      }
+      if (!this.s3Service.validateFileSize(file, maxSize)) {
+        throw new BadRequestException(`File ${file.originalname} is too large.`);
+      }
+    }
+
+    // Upload all files to S3
+    const folder = `profiles/${slug}/gallery/${mediatype}`;
+    const uploadedUrls = await this.s3Service.uploadMultipleFiles(files, folder);
+
+    // Save all to database
+    const gallery_id = profile.gallery[0].gallery_id;
+    const modelName = mediatype.charAt(0).toUpperCase() + mediatype.slice(1);
+
+    const createdItems: any[] = [];
+    for (const url of uploadedUrls) {
+      const created = await this.prisma[modelName].create({
+        data: {
+          url,
+          gallery_id,
+          deadPersonProfiles: slug,
+        },
+      });
+      createdItems.push(created);
+    }
+
+    return {
+      message: `${files.length} ${mediatype} files uploaded successfully`,
+      data: { urls: uploadedUrls, items: createdItems },
+      status: HttpStatus.CREATED,
+    };
+  }
+
+  async addGuestbookWithPhoto(slug: string, dto: Omit<CreateGuestBookDto, 'photo_upload'>, file?: Express.Multer.File) {
+    const { first_name, last_name, guestemail, phone, message } = dto;
+    const date = new Date().toISOString();
+
+    const profile = await this.prisma.deadPersonProfile.findUnique({
+      where: { slug },
+      include: { guestBook: true },
+    });
+    if (!profile || !profile.guestBook.length) {
+      throw new NotFoundException('Guestbook not found for this profile');
+    }
+
+    let photoUrl: string | null = null;
+
+    // Upload photo to S3 if provided
+    if (file) {
+      // Validate photo
+      const allowedImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      if (!this.s3Service.validateFileType(file, allowedImageTypes)) {
+        throw new BadRequestException('Invalid image type. Only JPEG, PNG, GIF, and WebP images are allowed.');
+      }
+
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (!this.s3Service.validateFileSize(file, maxSize)) {
+        throw new BadRequestException('Image size too large. Maximum size is 5MB.');
+      }
+
+      // Upload to S3
+      const folder = `profiles/${slug}/guestbook-photos`;
+      photoUrl = await this.s3Service.uploadFile(file, folder);
+    }
+
+    const guestbook_id = profile.guestBook[0].guestbook_id;
+    const created = await this.prisma.guestBookItems.create({
+      data: {
+        guestbook_id,
+        first_name,
+        last_name,
+        email: guestemail,
+        message,
+        phone,
+        photo_upload: photoUrl,
+        date,
+        is_approved: false,
+      },
+    });
+
+    return {
+      message: 'GuestBook entry added successfully',
+      data: created,
+      status: HttpStatus.CREATED,
     };
   }
 }

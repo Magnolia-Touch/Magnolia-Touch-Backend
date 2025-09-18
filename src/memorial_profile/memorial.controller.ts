@@ -1,21 +1,23 @@
 
-import { Controller, Post, Body, Query, Get, Patch, Req, Param, ParseIntPipe, Delete } from '@nestjs/common';
+import { Controller, Post, Body, Query, Get, Patch, Req, Param, ParseIntPipe, Delete, UseInterceptors, UploadedFile, UploadedFiles } from '@nestjs/common';
 import { MemorialProfileService } from './memorial.service';
 import { CreateDeadPersonProfileDto } from './dto/memorial_profile.dto';
 import { CreateFamilyMemberDto } from './dto/create-family.dto';
 import { UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
-import { CreateGalleryDto } from './dto/create-gallery.dto';
 import { CreateGuestBookDto } from './dto/create-guestbook.dto';
 import { RolesGuard } from 'src/common/decoraters/roles.guard';
 import { Roles } from 'src/common/decoraters/roles.decorator';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
+
+
 
 @Controller('memories')
 export class MemorialController {
-  constructor(private readonly deadPersonProfileService: MemorialProfileService) {}
+  constructor(private readonly deadPersonProfileService: MemorialProfileService) { }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
+ // @Roles('ADMIN')
   @Post('create-memorial-profile')
   async create(
     @Body() dto: Partial<CreateDeadPersonProfileDto>,
@@ -24,20 +26,22 @@ export class MemorialController {
     return this.deadPersonProfileService.create(dto, email);
   }
 
-  
-  @Get('by-code')
+
+  @Get('')
   async getBySlug(@Query('code') slug: string) {
     return this.deadPersonProfileService.getProfile(slug);
   }
 
 
   @Post('add-guestbook')
+  @UseInterceptors(FileInterceptor('image'))
   async addGuestBook(
     @Req() req,
     @Query('code') slug: string,
-    @Body() body: CreateGuestBookDto
+    @Body() body: CreateGuestBookDto,
+    @UploadedFile() image: Express.Multer.File
   ) {
-    return this.deadPersonProfileService.addGuestbook(slug, body);
+    return this.deadPersonProfileService.addGuestbook(slug, body, image);
   }
 
 
@@ -94,7 +98,7 @@ export class MemorialController {
     @Query('relation') relation: string,
     @Query('id', ParseIntPipe) id: number
   ) {
-    
+
     return this.deadPersonProfileService.getFamilybyId(slug, relation, id);
   }
 
@@ -126,21 +130,23 @@ export class MemorialController {
 
   @UseGuards(JwtAuthGuard)
   @Post('add-media')
+  @UseInterceptors(FileInterceptor('media'))
   async addGalleryItems(
     @Req() req,
     @Query('code') slug: string,
     @Query('mediatype') relation: string,
-    @Body() body: CreateGalleryDto
+    @UploadedFile() media: Express.Multer.File
+
   ) {
     const email = req.user.email;
-    return this.deadPersonProfileService.addGalleryItems(email, slug, relation, body);
+    return this.deadPersonProfileService.addGalleryItems(email, slug, relation, media);
   }
 
   @Get('by-code-gallery')
   async getGallery(@Query('code') slug: string) {
     return this.deadPersonProfileService.getGallery(slug);
   }
-  
+
   @UseGuards(JwtAuthGuard)
   @Delete('delete-media')
   async deleteGalleryItems(
@@ -152,20 +158,46 @@ export class MemorialController {
     const email = req.user.email;
     return this.deadPersonProfileService.deleteGalleryItems(email, slug, relation, id);
   }
-  
+
+  // New S3-integrated endpoints
+  @UseGuards(JwtAuthGuard)
+  @Post('upload-profile-image')
+  @UseInterceptors(FileInterceptor('image'))
+  async uploadProfileImage(
+    @Req() req,
+    @Query('code') slug: string,
+    @Query('type') type: 'profile' | 'background',
+    @UploadedFile() image: Express.Multer.File
+  ) {
+    const email = req.user.email;
+    return this.deadPersonProfileService.uploadProfileImage(email, slug, type, image);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('upload-media')
+  @UseInterceptors(FileInterceptor('media'))
+  async uploadMedia(
+    @Req() req,
+    @Query('code') slug: string,
+    @Query('mediatype') mediatype: string,
+    @UploadedFile() media: Express.Multer.File
+  ) {
+    const email = req.user.email;
+    return this.deadPersonProfileService.uploadMedia(email, slug, mediatype, media);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('upload-multiple-media')
+  @UseInterceptors(FilesInterceptor('media', 10)) // Allow up to 10 files
+  async uploadMultipleMedia(
+    @Req() req,
+    @Query('code') slug: string,
+    @Query('mediatype') mediatype: string,
+    @UploadedFiles() media: Express.Multer.File[]
+  ) {
+    const email = req.user.email;
+    return this.deadPersonProfileService.uploadMultipleMedia(email, slug, mediatype, media);
+  }
+
 }
 
-
-// todo: 
-// family -- completed
-//make proper error handling
-// retrieve, update and delete for biography, family, guestbook and gallery
-
-// guestbook
-// guestbook can be added -- done
-// guestbook message without approval view by profile owner -- done
-// guestbook message with approval View by anyone --done
-// delete guestbook message by profile owner -- done
-// update guestbook for change approve guestmessges -- done
-
-//gallery

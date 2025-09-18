@@ -16,6 +16,22 @@ datasource db {
 enum Role {
   USER
   ADMIN
+  DELIVERY
+}
+
+enum OrderStatus {
+  pending
+  processing
+  shipped
+  delivered
+  cancelled
+  refunded
+}
+
+enum CleaningStatus {
+  pending
+  confirmed
+  cleaned
 }
 
 model User {
@@ -26,15 +42,16 @@ model User {
   password      String
   role          Role   @default(USER)
 
-  Orders             Orders[]
-  Church             Church[]
-  Booking            Booking[]
-  Reviews            Reviews[]
-  UserAddress        UserAddress[]
-  BillingAddress     BillingAddress[]
-  Cart               Cart[]
-  deadPersonProfiles DeadPersonProfile[]
-  OrderItems         OrderItems[]
+  Orders               Orders[]
+  Church               Church[]
+  Booking              Booking[]
+  Reviews              Reviews[]
+  UserAddress          UserAddress[]
+  BillingAddress       BillingAddress[]
+  Cart                 Cart[]
+  deadPersonProfiles   DeadPersonProfile[]
+  OrderItems           OrderItems[]
+  DeliveryAgentProfile DeliveryAgentProfile[]
 }
 
 model UserAddress {
@@ -47,12 +64,13 @@ model UserAddress {
   phone           String
   email           String
 
-  User            User? @relation(fields: [userCustomer_id], references: [customer_id])
+  User            User?    @relation(fields: [userCustomer_id], references: [customer_id])
   userCustomer_id Int?
+  Orders          Orders[]
 }
 
 model BillingAddress {
-  bill_address_id Int     @id @default(autoincrement())
+  bill_address_id Int      @id @default(autoincrement())
   Name            String
   street          String
   town_or_city    String
@@ -60,30 +78,30 @@ model BillingAddress {
   postcode        String
   phone           String
   email           String
-  User            User?   @relation(fields: [userCustomer_id], references: [customer_id])
+  User            User?    @relation(fields: [userCustomer_id], references: [customer_id])
   userCustomer_id Int?
+  Orders          Orders[]
 }
 
 model Products {
-  product_id           Int     @id @default(autoincrement())
+  product_id           Int                @id @default(autoincrement())
   product_name         String
   price                String
   box_contains         String?
-  short_Description    String
-  detailed_description String?
-  company_guarantee    String?
-  order_ids            Int?
-
-  Dimensions      ProductDimension[]
-  orders          Orders?            @relation(fields: [order_ids], references: [Order_id])
-  CartItem        CartItem[]
-  OrderedProducts OrderedProducts[]
+  short_Description    String             @db.Text
+  detailed_description String?            @db.Text
+  company_guarantee    String?            @db.Text
+  orderItems           OrderItems[]
+  Dimensions           ProductDimension[]
+  CartItem             CartItem[]
 }
 
 model Services {
   services_id Int    @id @default(autoincrement())
+  image       String
   name        String
   discription String
+  features    String
 }
 
 model Cart {
@@ -108,38 +126,6 @@ model CartItem {
   product Products @relation(fields: [productId], references: [product_id])
 }
 
-model Orders {
-  Order_id Int @id @default(autoincrement())
-  User_id  Int @unique
-
-  user     User       @relation(fields: [User_id], references: [customer_id])
-  Products Products[]
-}
-
-model OrderedProducts {
-  orderedproduct_id Int @id @default(autoincrement())
-  order_item_id     Int
-  product_id        Int
-
-  product   Products   @relation(fields: [product_id], references: [product_id])
-  orderItem OrderItems @relation(fields: [order_item_id], references: [id])
-}
-
-model OrderItems {
-  id               Int     @id @default(autoincrement())
-  order_id         String  @unique
-  User_id          Int
-  parent_order_id  Int     @unique
-  Order_Status     String?
-  Total_Amount     Float
-  Payment_Details  String
-  Tracking_Details String?
-  is_paid          Boolean @default(false)
-
-  orderedProducts OrderedProducts[]
-  user            User              @relation(fields: [User_id], references: [customer_id])
-}
-
 model ProductDimension {
   dimension_id       Int       @id @default(autoincrement())
   dimension          String
@@ -160,6 +146,7 @@ model SubscriptionPlan {
 model Flowers {
   flower_id Int @id @default(autoincrement())
 
+  image       String
   Name        String
   Price       String
   Description String?
@@ -171,33 +158,36 @@ model Flowers {
 model Church {
   church_id       Int       @id @default(autoincrement())
   church_name     String
-  church_address  String
+  city            String
+  state           String
+  church_address  String?
   User            User?     @relation(fields: [userCustomer_id], references: [customer_id])
   userCustomer_id Int?
   Booking         Booking[]
 }
 
 model Booking {
-  id                 Int       @id @default(autoincrement())
-  booking_ids        String    @unique
-  name_on_memorial   String
-  plot_no            String?
-  User_id            Int
-  church_id          Int
-  Subscription_id    Int
-  amount             Int       @default(0)
-  date1              DateTime
-  date2              DateTime?
-  Flower_id          Int
-  booking_date       DateTime
-  next_cleaning_date DateTime?
-  status             String
-  is_bought          Boolean   @default(false)
+  id                       Int       @id @default(autoincrement())
+  booking_ids              String    @unique
+  name_on_memorial         String
+  plot_no                  String?
+  User_id                  Int
+  church_id                Int
+  Subscription_id          Int
+  amount                   Int       @default(0)
+  first_cleaning_date      DateTime
+  second_cleaning_date     DateTime?
+  no_of_subscription_years Int       @default(1)
+  Flower_id                Int?
+  booking_date             DateTime
+  anniversary_date         DateTime?
+  status                   CleaningStatus @default(pending)
+  is_bought                Boolean   @default(false)
 
   user         User             @relation(fields: [User_id], references: [customer_id])
   Church       Church           @relation(fields: [church_id], references: [church_id])
   subscription SubscriptionPlan @relation(fields: [Subscription_id], references: [Subscription_id])
-  flower       Flowers          @relation(fields: [Flower_id], references: [flower_id])
+  flower       Flowers?         @relation(fields: [Flower_id], references: [flower_id])
 }
 
 model Reviews {
@@ -455,4 +445,55 @@ model GreatGrandParents {
   profile DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
 
   family Family @relation(fields: [family_id], references: [family_id])
+}
+
+model Orders {
+  id                Int          @id @default(autoincrement())
+  User_id           Int          @unique
+  orderNumber       String       @unique
+  status            OrderStatus  @default(pending)
+  totalAmount       Decimal      @db.Decimal(10, 2)
+  shippingCost      Decimal      @default(0) @db.Decimal(10, 2)
+  taxAmount         Decimal      @default(0) @db.Decimal(10, 2)
+  discountAmount    Decimal      @default(0) @db.Decimal(10, 2)
+  notes             String?
+  shippingAddressId Int
+  billingAddressId  Int
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  items             OrderItems[]
+  tracking_details  String?
+  delivery_agent_id Int?
+
+  user                   User                  @relation(fields: [User_id], references: [customer_id])
+  useraddress            UserAddress           @relation(fields: [shippingAddressId], references: [deli_address_id])
+  billingaddress         BillingAddress        @relation(fields: [billingAddressId], references: [bill_address_id])
+  DeliveryAgentProfile   DeliveryAgentProfile? @relation(fields: [deliveryAgentProfileId], references: [id])
+  deliveryAgentProfileId Int?
+
+  @@map("orders")
+}
+
+model OrderItems {
+  id        Int     @id @default(autoincrement())
+  order_id  Int     @unique
+  productId Int
+  quantity  Int
+  price     Decimal @db.Decimal(10, 2)
+  total     Decimal @db.Decimal(10, 2)
+
+  order           Orders   @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  product         Products @relation(fields: [productId], references: [product_id])
+  User            User?    @relation(fields: [userCustomer_id], references: [customer_id])
+  userCustomer_id Int?
+
+  @@map("order_items")
+}
+
+model DeliveryAgentProfile {
+  id               Int      @id @default(autoincrement())
+  deliveryagent_id Int
+  orders           Orders[]
+
+  User User? @relation(fields: [deliveryagent_id], references: [customer_id])
 }

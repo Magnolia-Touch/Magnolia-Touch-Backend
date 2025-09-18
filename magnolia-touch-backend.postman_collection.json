@@ -1,0 +1,1989 @@
+{
+	"info": {
+		"_postman_id": "magnolia-touch-backend-api",
+		"name": "Magnolia Touch Backend API",
+		"description": "Complete API collection for Magnolia Touch Backend - A memorial service platform with booking, products, payments, and memorial profiles.\n\n## Features:\n- Authentication & User Management\n- Memorial Profile Management with S3 Media Storage\n- Booking & Subscription Services\n- Product & Cart Management\n- Payment Processing with Stripe\n- QR Code Generation\n- Church & Flower Services\n\n## Environment Variables:\n- `baseUrl`: http://localhost:3000 (or your server URL)\n- `token`: JWT token (set after login)\n- `userId`: User ID for authenticated requests\n- `email`: User email\n\n## Setup:\n1. Import this collection\n2. Set up environment variables\n3. Run authentication endpoints to get tokens\n4. Use the token in subsequent requests",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "🔐 Authentication",
+			"item": [
+				{
+					"name": "Register User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"customer_name\": \"John Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"password123\",\n  \"Phone\": \"+1234567890\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/register",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"register"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Register Admin",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"customer_name\": \"Admin User\",\n  \"email\": \"admin@example.com\",\n  \"password\": \"adminpass123\",\n  \"Phone\": \"+1234567890\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/adminregister",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"adminregister"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const responseJson = pm.response.json();",
+									"    if (responseJson.access_token) {",
+									"        pm.environment.set('token', responseJson.access_token);",
+									"        console.log('Token saved to environment');",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"identifier\": \"john.doe@example.com\",\n  \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/auth/logout",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"logout"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Users (Admin)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/auth/users?page=1&limit=10",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"users"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Profile",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/auth/profile",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"profile"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "👤 User Management",
+			"item": [
+				{
+					"name": "Create User Address",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"Name\": \"John Doe\",\n  \"street\": \"123 Main Street\",\n  \"town_or_city\": \"New York\",\n  \"country\": \"United States\",\n  \"postcode\": \"10001\",\n  \"phone\": \"+1234567890\",\n  \"email\": \"john.doe@example.com\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/user/create-user-address",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"user",
+								"create-user-address"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get User Addresses",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/user/get-user-address",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"user",
+								"get-user-address"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Billing Address",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"Name\": \"John Doe\",\n  \"street\": \"456 Billing Street\",\n  \"town_or_city\": \"New York\",\n  \"country\": \"United States\",\n  \"postcode\": \"10002\",\n  \"phone\": \"+1234567890\",\n  \"email\": \"john.doe@example.com\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/user/create-bill-address",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"user",
+								"create-bill-address"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Billing Addresses",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/user/getall-bill-address",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"user",
+								"getall-bill-address"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Active Subscriptions",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/user/get-active-subscriptions",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"user",
+								"get-active-subscriptions"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "🏺 Memorial Profiles",
+			"item": [
+				{
+					"name": "Create Memorial Profile (Admin)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"John Smith\",\n  \"born_date\": \"1950-01-15\",\n  \"death_date\": \"2023-12-01\",\n  \"memorial_place\": \"Green Valley Cemetery\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/memories/create-memorial-profile?email=owner@example.com",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"memories",
+								"create-memorial-profile"
+							],
+							"query": [
+								{
+									"key": "email",
+									"value": "owner@example.com"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Memorial Profile",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/memories?code=MEMORIAL_CODE",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"memories"
+							],
+							"query": [
+								{
+									"key": "code",
+									"value": "MEMORIAL_CODE"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Upload Profile Image",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "image",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/memories/upload-profile-image?code=MEMORIAL_CODE&type=profile",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"memories",
+								"upload-profile-image"
+							],
+							"query": [
+								{
+									"key": "code",
+									"value": "MEMORIAL_CODE"
+								},
+								{
+									"key": "type",
+									"value": "profile",
+									"description": "profile or background"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Upload Background Image",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "image",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/memories/upload-profile-image?code=MEMORIAL_CODE&type=background",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"memories",
+								"upload-profile-image"
+							],
+							"query": [
+								{
+									"key": "code",
+									"value": "MEMORIAL_CODE"
+								},
+								{
+									"key": "type",
+									"value": "background"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Upload Single Media",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "media",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/memories/upload-media?code=MEMORIAL_CODE&mediatype=photos",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"memories",
+								"upload-media"
+							],
+							"query": [
+								{
+									"key": "code",
+									"value": "MEMORIAL_CODE"
+								},
+								{
+									"key": "mediatype",
+									"value": "photos",
+									"description": "photos or videos"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Upload Multiple Media",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "media",
+									"type": "file",
+									"src": []
+								},
+								{
+									"key": "media",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/memories/upload-multiple-media?code=MEMORIAL_CODE&mediatype=photos",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"memories",
+								"upload-multiple-media"
+							],
+							"query": [
+								{
+									"key": "code",
+									"value": "MEMORIAL_CODE"
+								},
+								{
+									"key": "mediatype",
+									"value": "photos"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Add Guestbook Entry",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "first_name",
+									"value": "Jane",
+									"type": "text"
+								},
+								{
+									"key": "last_name",
+									"value": "Doe",
+									"type": "text"
+								},
+								{
+									"key": "guestemail",
+									"value": "jane.doe@example.com",
+									"type": "text"
+								},
+								{
+									"key": "phone",
+									"value": "+1234567890",
+									"type": "text"
+								},
+								{
+									"key": "message",
+									"value": "Beautiful memories of a wonderful person.",
+									"type": "text"
+								},
+								{
+									"key": "image",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/memories/add-guestbook?code=MEMORIAL_CODE",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"memories",
+								"add-guestbook"
+							],
+							"query": [
+								{
+									"key": "code",
+									"value": "MEMORIAL_CODE"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Approved Guestbook Messages",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/memories/guestmessages?code=MEMORIAL_CODE",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"memories",
+								"guestmessages"
+							],
+							"query": [
+								{
+									"key": "code",
+									"value": "MEMORIAL_CODE"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Unapproved Guestbook Messages",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/memories/unapproved-guestmessages?code=MEMORIAL_CODE",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"memories",
+								"unapproved-guestmessages"
+							],
+							"query": [
+								{
+									"key": "code",
+									"value": "MEMORIAL_CODE"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Approve Guestbook Message",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/memories/approve-guestmessages?code=MEMORIAL_CODE&id=1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"memories",
+								"approve-guestmessages"
+							],
+							"query": [
+								{
+									"key": "code",
+									"value": "MEMORIAL_CODE"
+								},
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Guestbook Message",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/memories/delete-guestmessages?code=MEMORIAL_CODE&id=1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"memories",
+								"delete-guestmessages"
+							],
+							"query": [
+								{
+									"key": "code",
+									"value": "MEMORIAL_CODE"
+								},
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Add Family Member",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Mary Smith\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/memories/add-family-member?code=MEMORIAL_CODE&relation=parents",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"memories",
+								"add-family-member"
+							],
+							"query": [
+								{
+									"key": "code",
+									"value": "MEMORIAL_CODE"
+								},
+								{
+									"key": "relation",
+									"value": "parents",
+									"description": "parents, siblings, cousins, friends, spouse, nieceAndNephew, childrens, pets, grandchildrens, grandparents, greatGrandParents"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Family",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/memories/by-code-family?code=MEMORIAL_CODE",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"memories",
+								"by-code-family"
+							],
+							"query": [
+								{
+									"key": "code",
+									"value": "MEMORIAL_CODE"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Gallery",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/memories/by-code-gallery?code=MEMORIAL_CODE",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"memories",
+								"by-code-gallery"
+							],
+							"query": [
+								{
+									"key": "code",
+									"value": "MEMORIAL_CODE"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Media",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/memories/delete-media?code=MEMORIAL_CODE&mediatype=photos&id=1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"memories",
+								"delete-media"
+							],
+							"query": [
+								{
+									"key": "code",
+									"value": "MEMORIAL_CODE"
+								},
+								{
+									"key": "mediatype",
+									"value": "photos"
+								},
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "🛒 Products & Cart",
+			"item": [
+				{
+					"name": "Add Product (Admin)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"product_name\": \"Memorial Candle Set\",\n  \"price\": \"29.99\",\n  \"box_contains\": \"3 memorial candles, holder\",\n  \"short_Description\": \"Beautiful memorial candle set for remembrance\",\n  \"detailed_description\": \"A carefully crafted set of memorial candles designed to honor the memory of loved ones.\",\n  \"company_guarantee\": \"30-day satisfaction guarantee\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/products/add-product",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"products",
+								"add-product"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Products",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/products/get-products",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"products",
+								"get-products"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Product by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/products/get-products-by?id=1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"products",
+								"get-products-by"
+							],
+							"query": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Product (Admin)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"product_name\": \"Premium Memorial Candle Set\",\n  \"price\": \"39.99\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/products/update-product?id=1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"products",
+								"update-product"
+							],
+							"query": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Product (Admin)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/products/delete-products-by?id=1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"products",
+								"delete-products-by"
+							],
+							"query": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Add to Cart",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/cart/add-to-cart?productId=1&quantity=2",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cart",
+								"add-to-cart"
+							],
+							"query": [
+								{
+									"key": "productId",
+									"value": "1"
+								},
+								{
+									"key": "quantity",
+									"value": "2"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Cart",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/cart/get-cart",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cart",
+								"get-cart"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Remove from Cart",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/cart/remove-from-cart?productId=1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cart",
+								"remove-from-cart"
+							],
+							"query": [
+								{
+									"key": "productId",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Clear Cart",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/cart/clear",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cart",
+								"clear"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "💳 Orders & Payments",
+			"item": [
+				{
+					"name": "Create Order",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"User_id\": 1,\n  \"orderNumber\": \"ORD-2024-001\",\n  \"totalAmount\": 99.99,\n  \"shippingCost\": 9.99,\n  \"taxAmount\": 8.99,\n  \"discountAmount\": 0,\n  \"notes\": \"Special delivery instructions\",\n  \"shippingAddressId\": 1,\n  \"billingAddressId\": 1\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/orders",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"orders"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Orders",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/orders",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"orders"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Order by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/orders/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"orders",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Order",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"notes\": \"Updated delivery instructions\",\n  \"tracking_details\": \"TRK123456789\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/orders/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"orders",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Order Status",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"shipped\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/orders/1/status",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"orders",
+								"1",
+								"status"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Order",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/orders/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"orders",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Payment Intent",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"shippingaddressId\": 1,\n  \"billingaddressId\": 1,\n  \"currency\": \"usd\",\n  \"productId\": 1,\n  \"quantity\": 2\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/stripe/create-payment-intent",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"stripe",
+								"create-payment-intent"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "📅 Bookings & Subscriptions",
+			"item": [
+				{
+					"name": "Create Cleaning Booking",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name_on_memorial\": \"John Smith Memorial\",\n  \"church_name\": \"St. Mary's Church\",\n  \"plot_no\": \"A-123\",\n  \"city\": \"New York\",\n  \"state\": \"NY\",\n  \"subscription_id\": 1,\n  \"flower_id\": 1,\n  \"first_cleaning_date\": \"2024-01-15T10:00:00Z\",\n  \"second_cleaning_date\": \"2024-07-15T10:00:00Z\",\n  \"anniversary_date\": \"2024-12-01T10:00:00Z\",\n  \"no_of_subsribe_years\": 1\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/booking/book-cleaning-service",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking",
+								"book-cleaning-service"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Booking Status",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"confirmed\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/booking/1/status",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking",
+								"1",
+								"status"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Add Subscription Plan (Admin)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"Subscription_name\": \"Annual Memorial Care\",\n  \"discription\": \"Complete annual memorial maintenance and care service\",\n  \"Frequency\": 12,\n  \"Price\": \"299.99\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/subscription/add-subscription-plans",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"subscription",
+								"add-subscription-plans"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Subscription Plans",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/subscription/get-subscription-plans",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"subscription",
+								"get-subscription-plans"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Subscription Plan by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/subscription/get-subscription-plans-by?id=1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"subscription",
+								"get-subscription-plans-by"
+							],
+							"query": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "🌸 Flowers & Services",
+			"item": [
+				{
+					"name": "Add Flower (Admin)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "Name",
+									"value": "White Lilies",
+									"type": "text"
+								},
+								{
+									"key": "Description",
+									"value": "Beautiful white lilies perfect for memorial services",
+									"type": "text"
+								},
+								{
+									"key": "Price",
+									"value": "45.99",
+									"type": "text"
+								},
+								{
+									"key": "in_stock",
+									"value": "true",
+									"type": "text"
+								},
+								{
+									"key": "image",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/flowers/add-flower",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"flowers",
+								"add-flower"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Flowers",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/flowers/get-all-flower",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"flowers",
+								"get-all-flower"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Flower Stock (Admin)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"in_stock\": false\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/flowers/update-flower-stock?id=1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"flowers",
+								"update-flower-stock"
+							],
+							"query": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Service (Admin)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "name",
+									"value": "Memorial Stone Cleaning",
+									"type": "text"
+								},
+								{
+									"key": "discription",
+									"value": "Professional cleaning and maintenance of memorial stones",
+									"type": "text"
+								},
+								{
+									"key": "features",
+									"value": "Deep cleaning, polishing, moss removal, protective coating",
+									"type": "text"
+								},
+								{
+									"key": "image",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/services/create-service",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"services",
+								"create-service"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Services",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/services/list-services",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"services",
+								"list-services"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Service by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/services/list-services-by-id/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"services",
+								"list-services-by-id",
+								"1"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "⛪ Churches",
+			"item": [
+				{
+					"name": "Add Church (Admin)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"church_name\": \"St. Mary's Cathedral\",\n  \"city\": \"New York\",\n  \"state\": \"NY\",\n  \"church_address\": \"123 Cathedral Street, New York, NY 10001\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/church/add-church",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"church",
+								"add-church"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Churches",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/church/get-church",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"church",
+								"get-church"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Church by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/church/get-church-by?id=1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"church",
+								"get-church-by"
+							],
+							"query": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "🔢 QR Generator",
+			"item": [
+				{
+					"name": "Generate QR Code (Admin)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"link\": \"https://memorial.example.com/memories?code=MEMORIAL_CODE\",\n  \"filename\": \"memorial-qr-code\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/qr/generate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"qr",
+								"generate"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "💰 Cost Estimation",
+			"item": [
+				{
+					"name": "Estimate Cost",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"subscription_id\": 1,\n  \"flower_id\": 1,\n  \"no_of_years\": 2,\n  \"additional_services\": [\"deep_cleaning\", \"flower_replacement\"]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/estimate/estimate-cost",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"estimate",
+								"estimate-cost"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:3000",
+			"type": "string"
+		},
+		{
+			"key": "token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "userId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "email",
+			"value": "",
+			"type": "string"
+		}
+	]
+}

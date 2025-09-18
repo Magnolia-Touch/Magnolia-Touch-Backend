@@ -3,21 +3,24 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateUserDto } from './dto/createuser.dto';
 import { CreateUserAddressDto } from './dto/create-user-address.dto';
 import { CreateBillingAddressDto } from './dto/create-billing-address.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class UserService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   // user creation functions
   async createUser(dto: CreateUserDto) {
     const { email, password, customer_name, Phone, role } = dto;
-    return await this.prisma.user.create({ data: {
-      customer_name: customer_name,
-      email: email,
-      password: password,
-      Phone: Phone,
-      role: role
-    } });
+    return await this.prisma.user.create({
+      data: {
+        customer_name: customer_name,
+        email: email,
+        password: password,
+        Phone: Phone,
+        role: role
+      }
+    });
   }
 
 
@@ -26,12 +29,13 @@ export class UserService {
   }
 
 
-  async updateUser(
-    id: number,
-    data: Partial<{ name: string; email: string; password: string }>
-  ) {
-    return await this.prisma.user.update({ where: { customer_id: id }, data });
+  async updateUser(id: number, data: UpdateUserDto) {
+    return await this.prisma.user.update({
+      where: { customer_id: id },
+      data,
+    });
   }
+
 
 
   async deleteUser(id: number) {
@@ -51,25 +55,28 @@ export class UserService {
 
 
   // User delivery Address Creation function
-  async createDeliAddrs(dto: CreateUserAddressDto) {
-    return this.prisma.userAddress.create({ data: dto });
+  async createDeliAddrs(dto: CreateUserAddressDto, user_id: number) {
+    return this.prisma.userAddress.create({ data: { ...dto, userCustomer_id: user_id } });
   }
 
 
-  async getAllDeliAddrs() {
-    return this.prisma.userAddress.findMany();
+  async getAllDeliAddrs(user_id: number) {
+    return this.prisma.userAddress.findMany({ where: { userCustomer_id: user_id } });
   }
 
 
   //User Billing Address Creation functions
-  async createBillAddrs(dto: CreateBillingAddressDto) {
-    return this.prisma.billingAddress.create({ data: dto });
+  async createBillAddrs(dto: CreateBillingAddressDto, user_id: number) {
+    return this.prisma.billingAddress.create({ data: { ...dto, userCustomer_id: user_id } });
   }
 
 
-  async getAllBillAddr() {
-    return this.prisma.billingAddress.findMany();
+  async getAllBillAddr(user_id: number) {
+    return this.prisma.billingAddress.findMany({ where: { userCustomer_id: user_id } });
   }
 
-  
+  async getActiveSubscription(user_id: number) {
+    return this.prisma.booking.findMany({ where: { User_id: user_id } })
+  }
+
 }

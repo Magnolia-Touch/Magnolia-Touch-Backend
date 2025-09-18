@@ -2,54 +2,50 @@
 import { Injectable, NotFoundException, HttpStatus } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EstimateCostDto } from './dto/estimate-cost.dto';
+import { stat } from 'fs';
 
 @Injectable()
 export class LogicService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async estimateCost(
-    cemeteryId: number,
-    planId: number,
-    flowerId: number,
     dto: EstimateCostDto,
   ) {
-    const { firstCleaningDate, nextCleaningDate, anniversaryDate, nameOnBouquet } = dto;
-
-    const cemetery = await this.prisma.church.findUnique({ where: { church_id: cemeteryId } });
-    const plan = await this.prisma.subscriptionPlan.findUnique({ where: { Subscription_id: planId } });
-    const flower = await this.prisma.flowers.findUnique({ where: { flower_id: flowerId } });
-
-    if (!cemetery || !plan || !flower) {
-      throw new NotFoundException('Invalid cemetery, plan, or flower selection.');
+    const { church_name, plot_no, city, state, subscription_id, flower_id, first_cleaning_date, second_cleaning_date, anniversary_date, no_of_subsribe_years } = dto;
+    const subscribed_plan = await this.prisma.subscriptionPlan.findUnique({
+      where: { Subscription_id: subscription_id },
+    });
+    if (!subscribed_plan) {
+      throw new Error('Subscription plan not found');
     }
 
-    // Example cost logic
-    const flowerCost = parseInt(flower.Price, 10);  // '500' => 500
-    const planCost = parseInt(plan.Price, 10);      // '2000' => 2000
-           // e.g., flat per cleaning
-    console.log('💐 Flower Price:', flower.Price, 'Type:', typeof flower.Price);
-    console.log('📦 Plan Price:', plan.Price, 'Type:', typeof plan.Price);
+    const flower = flower_id
+      ? await this.prisma.flowers.findUnique({ where: { flower_id } })
+      : null;
 
-
-
-    const nameOnBouquetCharge = nameOnBouquet ? 50 : 0;
-
-    const total = flowerCost + planCost + nameOnBouquetCharge;
+    let flowerCost = 0
+    if (flower) {
+      flowerCost = parseInt(flower.Price, 10)
+    }
+    const planCost = parseInt(subscribed_plan.Price, 10);      // '2000' => 2000
+    const total = flowerCost + planCost
 
     return {
-    message: 'Cost estimated successfully',
-    data: {
-        cemeteryName: cemetery.church_name,
-        location: dto.city || dto.state,
-        chosenPlan: plan.Subscription_name,
-        flower: flower.Name,
-        firstCleaningDate,
-        nextCleaningDate,
-        anniversaryDate,
-        nameOnBouquet,
+      message: 'Cost estimated successfully',
+      data: {
+        cemeteryName: church_name,
+        plot_no: plot_no,
+        city: city,
+        state: state,
+        chosenPlan: subscribed_plan,
+        no_of_subsribe_years: no_of_subsribe_years,
+        flower: flower ?? null,
+        first_cleaning_date,
+        second_cleaning_date,
+        anniversary_date,
         totalCost: total,
-    },
-    status: HttpStatus.OK,
+      },
+      status: HttpStatus.OK,
     };
   }
 }

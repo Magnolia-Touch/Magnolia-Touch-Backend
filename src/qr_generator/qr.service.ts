@@ -1,27 +1,27 @@
 // src/qr/qr.service.ts
 import { Injectable } from '@nestjs/common';
 import * as QRCode from 'qrcode';
-import * as fs from 'fs';
-import * as path from 'path';
+import { S3Service } from '../s3/s3.service';
 
 @Injectable()
 export class QrService {
+  constructor(private readonly s3Service: S3Service) {}
+
   async generateAndSaveQRCode(link: string, filename: string): Promise<string> {
     try {
       const qrBuffer = await QRCode.toBuffer(link);
 
-      const folderPath = path.join(__dirname, '..', '..', 'qr-images');
-      const filePath = path.join(folderPath, `${filename}.png`);
+      // Upload to S3 instead of saving locally
+      const s3Url = await this.s3Service.uploadBuffer(
+        qrBuffer,
+        `${filename}.png`,
+        'image/png',
+        'qr-codes'
+      );
 
-      // Ensure folder exists
-      if (!fs.existsSync(folderPath)) {
-        fs.mkdirSync(folderPath, { recursive: true });
-      }
-
-      fs.writeFileSync(filePath, qrBuffer);
-      return `QR code saved at: ${filePath}`;
+      return s3Url;
     } catch (error) {
-      throw new Error(`Failed to save QR code: ${error.message}`);
+      throw new Error(`Failed to generate and upload QR code: ${error.message}`);
     }
   }
 }

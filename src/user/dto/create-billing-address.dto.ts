@@ -23,7 +23,4 @@ export class CreateBillingAddressDto {
   @IsString()
   email: string;
 
-  @IsOptional()
-  @IsInt()
-  userCustomer_id?: number;
 }

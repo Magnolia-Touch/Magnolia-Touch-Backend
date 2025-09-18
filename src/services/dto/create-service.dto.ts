@@ -6,4 +6,7 @@ export class CreateServiceDto {
 
   @IsString()
   discription: string;
+
+   @IsString()
+  features: string;
 }

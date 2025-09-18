@@ -13,9 +13,7 @@ export class CreateGuestBookDto {
   phone: string;
   @IsString()
   message: string;
-  @IsOptional()
-  @IsString()
-  photo_upload: string;
+
 
 
 }

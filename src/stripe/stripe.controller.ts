@@ -1,59 +1,118 @@
-import { Controller, Post, HttpCode, HttpStatus, Headers, Req, Body, Query, Request } from '@nestjs/common';
-import Stripe from 'stripe';
-import * as dotenv from 'dotenv'
+import { Controller, Post, HttpCode, HttpStatus, Headers, Req, Body, Query, Request, ParseIntPipe } from '@nestjs/common';
 import { StripeService } from './stripe.service';
 import { UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/common/decoraters/roles.guard';
-dotenv.config()
-const stripe = new Stripe(process.env.STRIPE_API_KEY!, {
-  apiVersion: '2025-06-30.basil',
-});
+import { CheckoutDto } from './dto/checkout.dto';
+import { CheckoutSessionDto } from './dto/checkout-session.dto';
+import { ServiceBookingDto } from './dto/service-booking.dto';
+import { ServiceCheckoutSessionDto } from './dto/service-checkout-session.dto';
+import { PrismaService } from 'src/prisma/prisma.service';
 
 @Controller('stripe')
 export class StripeController {
-  constructor(private readonly stripeService: StripeService) {}
+  constructor(
+    private readonly stripeService: StripeService,
+    private readonly prisma: PrismaService,
+  ) { }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard)
   @Post('create-payment-intent')
-  async createPaymentIntent(@Body() body: { amount: number; currency: string },@Query('productId') productId: number, @Request() req) {
-    const { amount, currency } = body;
-    const email = req.user.email
-    return this.stripeService.createPaymentIntentforProduct(amount, currency, productId, email);
+  async createPaymentIntent(
+    @Body() checkoutdto: CheckoutDto,
+    @Request() req,
+  ) {
+    const { email, id } = req.user;
+    const { productId, quantity, cartId } = checkoutdto;
+
+    return this.stripeService.createPaymentIntentforProduct(
+      checkoutdto,
+      email,
+      id,
+      productId,
+      quantity,
+      cartId,
+    );
   }
 
-  // @Post('webhook')
-  // @HttpCode(HttpStatus.OK)
-  // async handleWebhook(
-  //   @Req() request: Request,
-  //   @Headers('stripe-signature') sig: string,
-  // ) {
-  //   const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
-  //   let event: Stripe.Event;
+  @UseGuards(JwtAuthGuard)
+  @Post('create-service-payment-intent')
+  async createServicePaymentIntent(
+    @Body() serviceBookingDto: ServiceBookingDto,
+    @Request() req,
+  ) {
+    const { email } = req.user;
+    const { amount, currency, booking_id } = serviceBookingDto;
 
-  //   try {
-  //     event = stripe.webhooks.constructEvent(request.body, sig, endpointSecret!);
-  //   } catch (err: any) {
-  //     console.error('Webhook Error:', err.message);
-  //     return { error: `Webhook Error: ${err.message}` };
-  //   }
+    // Get booking details to generate booking_ids
+    const booking = await this.prisma.booking.findUnique({
+      where: { id: booking_id }
+    });
+    
+    if (!booking) {
+      throw new Error('Booking not found');
+    }
 
-  //   // Process event
-  //   switch (event.type) {
-  //     case 'payment_intent.succeeded':
-  //       const intent = event.data.object as Stripe.PaymentIntent;
-  //       console.log('✅ Payment succeeded:', intent.id);
-  //       break;
+    return this.stripeService.createPaymentIntentforService(
+      amount,
+      currency,
+      booking.booking_ids,
+      email,
+      booking_id,
+    );
+  }
 
-  //     case 'payment_intent.payment_failed':
-  //       const failedIntent = event.data.object as Stripe.PaymentIntent;
-  //       console.error('❌ Payment failed:', failedIntent.last_payment_error?.message);
-  //       break;
+  @UseGuards(JwtAuthGuard)
+  @Post('create-checkout-session')
+  async createCheckoutSession(
+    @Body() checkoutSessionDto: CheckoutSessionDto,
+    @Request() req,
+  ) {
+    const { email, id } = req.user;
+    const { productId, quantity, cartId } = checkoutSessionDto;
 
-  //     default:
-  //       console.log(`Unhandled event type: ${event.type}`);
-  //   }
+    return this.stripeService.createCheckoutSessionforProduct(
+      checkoutSessionDto,
+      email,
+      id,
+      productId,
+      quantity,
+      cartId,
+    );
+  }
 
-  //   return { received: true };
-  // }
+  @UseGuards(JwtAuthGuard)
+  @Post('create-service-checkout-session')
+  async createServiceCheckoutSession(
+    @Body() serviceCheckoutSessionDto: ServiceCheckoutSessionDto,
+    @Request() req,
+  ) {
+    const { email } = req.user;
+    const { amount, currency, booking_id } = serviceCheckoutSessionDto;
+
+    // Get booking details to generate booking_ids
+    const booking = await this.prisma.booking.findUnique({
+      where: { id: booking_id }
+    });
+    
+    if (!booking) {
+      throw new Error('Booking not found');
+    }
+
+    return this.stripeService.createCheckoutSessionforService(
+      serviceCheckoutSessionDto,
+      email,
+      booking.booking_ids,
+      booking_id,
+    );
+  }
+
+@Post('webhook')
+  @HttpCode(HttpStatus.OK)
+  async handleWebhook(
+    @Req() request: any,
+    @Headers('stripe-signature') signature: string,
+  ) {
+    return this.stripeService.handleWebhook(request.body, signature);
+  }
 }

@@ -5,15 +5,12 @@ import { LogicService } from './logics.service';
 
 @Controller('estimate')
 export class LogicController {
-  constructor(private readonly logicService: LogicService) {}
+  constructor(private readonly logicService: LogicService) { }
 
   @Get('estimate-cost')
   async estimateCost(
-    @Query('cemeteryId') cemeteryId: number,
-    @Query('planId') planId: number,
-    @Query('flowerId') flowerId: number,
     @Body() dto: EstimateCostDto,
   ) {
-    return await this.logicService.estimateCost(+cemeteryId, +planId, +flowerId, dto);
+    return await this.logicService.estimateCost(dto);
   }
 }

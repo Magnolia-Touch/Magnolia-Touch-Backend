@@ -7,6 +7,7 @@ import {
   ParseIntPipe,
   Query,
   UseGuards,
+  UploadedFile, UseInterceptors
 
 } from '@nestjs/common';
 import { ServicesService } from './services.service';
@@ -14,6 +15,7 @@ import { CreateServiceDto } from './dto/create-service.dto';
 import { Roles } from 'src/common/decoraters/roles.decorator';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/common/decoraters/roles.guard';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 
 
@@ -24,8 +26,9 @@ export class ServicesController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
   @Post('create-service')
-  async create(@Body() dto: CreateServiceDto) {
-    return await this.servicesService.create(dto);
+  @UseInterceptors(FileInterceptor('image'))
+  async create(@UploadedFile() image: Express.Multer.File, @Body() dto: CreateServiceDto) {
+    return await this.servicesService.create(dto, image);
   }
 
   @Get('list-services')

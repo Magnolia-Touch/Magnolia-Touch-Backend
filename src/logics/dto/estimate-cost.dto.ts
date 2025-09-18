@@ -1,23 +1,40 @@
-import { IsOptional, IsString, IsDateString } from 'class-validator';
+import { IsOptional, IsString, IsDateString, IsInt } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class EstimateCostDto {
+  @IsString()
+  church_name: string;
+
+  @IsString()
+  plot_no: string;
+
+  @IsString()
+  city: string;
+
+  @IsString()
+  state: string;
+
+  @IsInt()
+  @Type(() => Number)
+  subscription_id: number;
+
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  flower_id?: number;
+
+  @IsString()
+  first_cleaning_date: Date;
+
   @IsOptional()
   @IsString()
-  city?: string;
+  second_cleaning_date?: Date;
 
   @IsOptional()
   @IsString()
-  state?: string;
+  anniversary_date?: Date;
 
-  @IsDateString()
-  firstCleaningDate: string;
-
-  @IsDateString()
-  nextCleaningDate: string;
-
-  @IsDateString()
-  anniversaryDate: string;
-
-  @IsString()
-  nameOnBouquet: string;
+  @IsOptional()
+  @IsInt()
+  no_of_subsribe_years?: number;
 }

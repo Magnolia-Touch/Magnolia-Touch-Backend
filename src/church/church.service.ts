@@ -4,13 +4,16 @@ import { CreateChurchDto } from './dto/church-create.dto';
 
 @Injectable()
 export class ChurchService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
+
 
   async create(dto: CreateChurchDto) {
     const church = await this.prisma.church.create({
       data: {
         church_name: dto.church_name,
         church_address: dto.church_address,
+        city: dto.city,
+        state: dto.state,
       },
     });
 
