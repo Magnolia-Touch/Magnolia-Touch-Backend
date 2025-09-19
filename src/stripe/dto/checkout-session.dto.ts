@@ -1,11 +1,19 @@
 import { IsInt, IsOptional, IsString, ValidateIf, IsUrl } from "class-validator";
 
 export class CheckoutSessionDto {
+    @IsOptional()
     @IsInt()
     shippingaddressId: number;
 
     @IsInt()
     billingaddressId: number;
+
+    @IsOptional()
+    @IsInt()
+    church_id: number;
+
+    @IsString()
+    memoryProfileId: string;
 
     @IsString()
     currency: string;
@@ -15,18 +23,4 @@ export class CheckoutSessionDto {
 
     @IsUrl()
     cancelUrl: string;
-
-    // Either cartId OR productId should be provided
-    @IsOptional()
-    @IsInt()
-    cartId?: number;
-
-    @ValidateIf(o => o.cartId === undefined) // Only validate if no cartId
-    @IsInt()
-    productId?: number;
-
-    @ValidateIf(o => o.cartId === undefined) // Only validate if no cartId
-    @IsOptional()
-    @IsInt()
-    quantity?: number;
 }

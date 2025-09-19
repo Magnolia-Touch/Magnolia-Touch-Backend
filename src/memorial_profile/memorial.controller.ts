@@ -16,14 +16,13 @@ import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 export class MemorialController {
   constructor(private readonly deadPersonProfileService: MemorialProfileService) { }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
- // @Roles('ADMIN')
+  @UseGuards(JwtAuthGuard)
   @Post('create-memorial-profile')
   async create(
     @Body() dto: Partial<CreateDeadPersonProfileDto>,
-    @Query('email') email: string
+    @Req() req
   ) {
-    return this.deadPersonProfileService.create(dto, email);
+    return this.deadPersonProfileService.create(dto, req.user.email);
   }
 
 

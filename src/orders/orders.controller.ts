@@ -6,7 +6,7 @@ import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 
 @Controller('orders')
 export class OrdersController {
-  constructor(private readonly ordersService: OrdersService) {}
+  constructor(private readonly ordersService: OrdersService) { }
 
   @Post()
   create(@Body() createOrderDto: CreateOrderDto) {
@@ -34,8 +34,8 @@ export class OrdersController {
   }
 
   @Patch(":id/status")
-  updateStatus(@Param('id') id: string, @Body() updatestatusdto: UpdateOrderStatusDto ){
-    return this.ordersService.updateStaus(+id, updatestatusdto)
+  updateStatus(@Param('id') id: string, @Body() updatestatusdto: UpdateOrderStatusDto) {
+    return this.ordersService.updateStatus(+id, updatestatusdto)
   }
 
 }

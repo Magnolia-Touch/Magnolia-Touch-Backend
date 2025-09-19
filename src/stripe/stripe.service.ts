@@ -18,74 +18,49 @@ export class StripeService {
   private readonly logger = new Logger(StripeService.name);
 
   constructor(
-    @Inject('STRIPE_API_KEY')
-    private readonly apiKey: string,
-    private prisma: PrismaService,
-    private orderservice: OrdersService,
-    private configService: ConfigService,
-    private webhookService: WebhookService,
+    private readonly prisma: PrismaService,
+    private readonly orderservice: OrdersService,
+    private readonly configService: ConfigService,
+    private readonly webhookService: WebhookService,
   ) {
-    this.stripe = new Stripe(this.apiKey, {
+    const stripeSecretKey = this.configService.get<string>('STRIPE_SECRET_KEY');
+    if (!stripeSecretKey) throw new Error('STRIPE_SECRET_KEY is not configured');
+
+    this.stripe = new Stripe(stripeSecretKey, {
       apiVersion: '2025-06-30.basil',
     });
   }
 
-  async createPaymentIntentforProduct(
+  async createPaymentIntentforQR(
     checkoutdto: CheckoutDto,
     user_email: string,
     user_id: number,
-    product_id?: number,
-    quantity?: number,
-    cartId?: number,
   ): Promise<Stripe.PaymentIntent> {
-    let items: {
-      productId: number;
-      quantity: number;
-      price: number;
-      total: number;
-    }[] = [];
-
     let subtotal = 0;
     let product: any | null = null;
-    const { shippingaddressId, billingaddressId, currency } = checkoutdto;
+    const {
+      shippingaddressId,
+      billingaddressId,
+      currency,
+      church_id,
+      memoryProfileId,
+    } = checkoutdto;
+
+    let shippingAddress: any | null = null;
+    let billingAddress: any | null = null;
+    let church: any | null = null;
+    if (shippingaddressId) {
+      shippingAddress = await this.prisma.userAddress.findUnique({ where: { deli_address_id: shippingaddressId } })
+    }
+    else if (billingaddressId) {
+      billingAddress = await this.prisma.billingAddress.findUnique({ where: { bill_address_id: billingaddressId } })
+    }
+    else if (church_id) {
+      church = await this.prisma.church.findUnique({ where: { church_id: church_id } })
+    }
     try {
-      // Case 1: Checkout from Cart
-      if (cartId) {
-        const cartItems = await this.prisma.cartItem.findMany({
-          where: { cartId },
-          include: { product: true },
-        });
-
-        if (!cartItems.length) throw new Error('Cart is empty');
-
-        items = cartItems.map((ci) => ({
-          productId: ci.productId,
-          quantity: ci.quantity,
-          price: Number(ci.product.price),
-          total: ci.quantity * Number(ci.product.price),
-        }));
-        subtotal = items.reduce((acc, i) => acc + i.total, 0);
-      }
-      // Case 2: Single Product Checkout
-      else if (product_id) {
-        product = await this.prisma.products.findUnique({
-          where: { product_id },
-        });
-
-        if (!product)
-          throw new Error(`Product with ID ${product_id} not found`);
-
-        items = [
-          {
-            productId: product.product_id,
-            quantity: quantity ?? 1,
-            price: Number(product.price),
-            total: (quantity ?? 1) * Number(product.price),
-          },
-        ];
-
-        subtotal = items[0].total;
-      }
+      //hardcode for demo
+      subtotal = product ? Number(product.price) : 100; // fallback ₹100 / $1.00
 
       // 1️⃣ Create Order in DB
       const order = await this.orderservice.create({
@@ -93,35 +68,38 @@ export class StripeService {
         orderNumber: generateOrderIdforProduct(),
         status: 'pending',
         totalAmount: subtotal,
-        shippingAddressId: shippingaddressId,
+        shippingAddressId: shippingaddressId ?? null,
         billingAddressId: billingaddressId,
+        church_id: church_id ?? null,
+        memoryProfileId: memoryProfileId ?? 'none',
         tracking_details: undefined,
         delivery_agent_id: undefined,
-        items,
       });
 
-      // 2️⃣ Create PaymentIntent in Stripe
+      // 2️⃣ Ensure subtotal > 0
+      if (subtotal <= 0) {
+        throw new Error('Subtotal must be greater than 0 to create a payment intent');
+      }
+
+      // 3️⃣ Create PaymentIntent in Stripe
       const paymentIntent = await this.stripe.paymentIntents.create({
-        amount: Math.round(subtotal * 100),
+        amount: Math.round(subtotal * 100), // Stripe expects cents/paise
         currency,
         metadata: {
           order_id: String(order.id),
           orderNumber: order.orderNumber,
           user_email,
-          ...(product
-            ? {
-                product_id: String(product.product_id),
-                product_name: product.product_name,
-                price: String(product.price),
-                box_contains: product.box_contains,
-                short_Description: product.short_Description?.slice(0, 200),
-              }
-            : { cartId: String(cartId) }),
+          memoryProfile: `http://localhost:3000/memories?code=${memoryProfileId}`,
+          shippingaddress: shippingAddress,
+          BillingAddress: billingAddress,
+          church: church,
         },
       });
+
       this.logger.log(
         `PaymentIntent created successfully with amount: ${subtotal} ${currency}`,
       );
+
       return paymentIntent;
     } catch (error) {
       this.logger.error('Failed to create PaymentIntent', error.stack);
@@ -162,95 +140,42 @@ export class StripeService {
     }
   }
 
-  async createCheckoutSessionforProduct(
+  async createCheckoutSessionforQr(
     checkoutSessionDto: CheckoutSessionDto,
     user_email: string,
     user_id: number,
-    product_id?: number,
-    quantity?: number,
-    cartId?: number,
+
   ): Promise<Stripe.Checkout.Session> {
     let line_items: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
     let subtotal = 0;
-    let product: any | null = null;
-    const { shippingaddressId, billingaddressId, currency, successUrl, cancelUrl } = checkoutSessionDto;
-    
+    const { shippingaddressId, billingaddressId, currency, church_id, memoryProfileId, successUrl, cancelUrl } = checkoutSessionDto;
+
+    let shippingAddress: any | null = null;
+    let billingAddress: any | null = null;
+    let church: any | null = null;
+    if (shippingaddressId) {
+      shippingAddress = await this.prisma.userAddress.findUnique({ where: { deli_address_id: shippingaddressId } })
+    }
+    else if (billingaddressId) {
+      billingAddress = await this.prisma.billingAddress.findUnique({ where: { bill_address_id: billingaddressId } })
+    }
+    else if (church_id) {
+      church = await this.prisma.church.findUnique({ where: { church_id: church_id } })
+    }
+
     try {
-      // Case 1: Checkout from Cart
-      if (cartId) {
-        const cartItems = await this.prisma.cartItem.findMany({
-          where: { cartId },
-          include: { product: true },
-        });
-
-        if (!cartItems.length) throw new Error('Cart is empty');
-
-        line_items = cartItems.map((ci) => ({
-          price_data: {
-            currency: currency.toLowerCase(),
-            product_data: {
-              name: ci.product.product_name,
-              description: ci.product.short_Description?.slice(0, 300) || undefined,
-              images: undefined, // Product image field needs to be checked in your database schema
-            },
-            unit_amount: Math.round(Number(ci.product.price) * 100),
-          },
-          quantity: ci.quantity,
-        }));
-        
-        subtotal = cartItems.reduce((acc, ci) => acc + (ci.quantity * Number(ci.product.price)), 0);
-      }
-      // Case 2: Single Product Checkout
-      else if (product_id) {
-        product = await this.prisma.products.findUnique({
-          where: { product_id },
-        });
-
-        if (!product)
-          throw new Error(`Product with ID ${product_id} not found`);
-
-        line_items = [{
-          price_data: {
-            currency: currency.toLowerCase(),
-            product_data: {
-              name: product.product_name,
-              description: product.short_Description?.slice(0, 300) || undefined,
-              images: undefined, // Product image field needs to be checked in your database schema
-            },
-            unit_amount: Math.round(Number(product.price) * 100),
-          },
-          quantity: quantity ?? 1,
-        }];
-
-        subtotal = (quantity ?? 1) * Number(product.price);
-      }
-
       // 1️⃣ Create Order in DB (with pending status)
       const order = await this.orderservice.create({
         User_id: user_id,
         orderNumber: generateOrderIdforProduct(),
         status: 'pending',
         totalAmount: subtotal,
-        shippingAddressId: shippingaddressId,
+        shippingAddressId: shippingaddressId ?? null,
         billingAddressId: billingaddressId,
+        church_id: church_id ?? null,
+        memoryProfileId: memoryProfileId ?? 'none',
         tracking_details: undefined,
         delivery_agent_id: undefined,
-        items: cartId ? 
-          (await this.prisma.cartItem.findMany({ 
-            where: { cartId }, 
-            include: { product: true } 
-          })).map(ci => ({
-            productId: ci.productId,
-            quantity: ci.quantity,
-            price: Number(ci.product.price),
-            total: ci.quantity * Number(ci.product.price),
-          })) : 
-          [{
-            productId: product.product_id,
-            quantity: quantity ?? 1,
-            price: Number(product.price),
-            total: (quantity ?? 1) * Number(product.price),
-          }],
       });
 
       // 2️⃣ Create Checkout Session in Stripe
@@ -261,27 +186,21 @@ export class StripeService {
         success_url: successUrl + '?session_id={CHECKOUT_SESSION_ID}',
         cancel_url: cancelUrl,
         customer_email: user_email,
-        metadata: {
-          order_id: String(order.id),
-          orderNumber: order.orderNumber,
-          user_email,
-          user_id: String(user_id),
-          ...(product
-            ? {
-                product_id: String(product.product_id),
-                product_name: product.product_name,
-                price: String(product.price),
-                box_contains: product.box_contains,
-                short_Description: product.short_Description?.slice(0, 200),
-              }
-            : { cartId: String(cartId) }),
-        },
         shipping_address_collection: {
           allowed_countries: ['US', 'CA', 'GB'], // Configure based on your shipping zones
         },
         billing_address_collection: 'required',
+        metadata: {
+          order_id: String(order.id),
+          orderNumber: order.orderNumber,
+          user_email,
+          memoryProfile: `http://localhost:3000/memories?code=${memoryProfileId}`,
+          shippingaddress: shippingAddress,
+          BillingAddress: billingAddress,
+          church: church,
+        },
       });
-      
+
       this.logger.log(
         `Checkout Session created successfully with amount: ${subtotal} ${currency}`,
       );
@@ -299,7 +218,7 @@ export class StripeService {
     booking_id?: number,
   ): Promise<Stripe.Checkout.Session> {
     const { amount, currency, successUrl, cancelUrl } = serviceCheckoutSessionDto;
-    
+
     try {
       const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] = [{
         price_data: {
@@ -329,7 +248,7 @@ export class StripeService {
           user_email,
         },
       });
-      
+
       this.logger.log(
         `Checkout Session created successfully for booking ${booking_ids} with amount: ${amount} ${currency}`,
       );
@@ -388,7 +307,7 @@ export class StripeService {
           user_email,
         },
       });
-      
+
       this.logger.log(
         `Checkout Session created for existing booking ${booking.booking_ids} with amount: ${booking.amount} USD`,
       );

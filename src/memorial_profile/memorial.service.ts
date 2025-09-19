@@ -16,13 +16,6 @@ export class MemorialProfileService {
 
   //Create profile for Dead Person
   async create(dto: Partial<CreateDeadPersonProfileDto>, email: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { email },
-    });
-
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
     let uniqueSlug = '';
     let isUnique = false;
     while (!isUnique) {
@@ -87,7 +80,7 @@ export class MemorialProfileService {
 
   async addGuestbook(slug: string, dto: CreateGuestBookDto, image: Express.Multer.File) {
     const { first_name, last_name, guestemail, phone, message } = dto;
-    
+
     let imageUrl: string | null = null;
     if (image) {
       // Upload image to S3
@@ -95,15 +88,15 @@ export class MemorialProfileService {
       if (!this.s3Service.validateFileType(image, allowedImageTypes)) {
         throw new BadRequestException('Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed.');
       }
-      
+
       const maxSize = 5 * 1024 * 1024; // 5MB
       if (!this.s3Service.validateFileSize(image, maxSize)) {
         throw new BadRequestException('File size too large. Maximum size is 5MB.');
       }
-      
+
       imageUrl = await this.s3Service.uploadFile(image, `guestbook/${slug}/images`);
     }
-    
+
     const date = new Date().toISOString(); // Get current date in ISO format
     const profile = await this.prisma.deadPersonProfile.findUnique({
       where: { slug },
