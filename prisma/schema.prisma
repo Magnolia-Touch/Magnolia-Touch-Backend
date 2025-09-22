@@ -28,11 +28,19 @@ enum OrderStatus {
   refunded
 }
 
+enum SocialNames {
+  FACEBOOK
+  INSTAGRAM
+  TWITTER
+  YOUTUBE
+}
+
 enum CleaningStatus {
   pending
   confirmed
   cleaned
 }
+
 
 model User {
   customer_id   Int    @id @default(autoincrement())
@@ -201,107 +209,71 @@ model Reviews {
 model DeadPersonProfile {
   profile_id       Int     @id @default(autoincrement())
   owner_id         String
-  name             String?
+  firstName        String
+  lastName         String
   profile_image    String?
   background_image String?
-  born_date        String?
-  death_date       String?
+  born_date        String
+  death_date       String
   memorial_place   String?
   is_paid          Boolean @default(false)
   slug             String  @unique
 
-  biography         Biography[]
-  gallery           Gallery[]
-  family            Family[]
-  guestBook         GuestBook[]
-  user              User                @relation(fields: [owner_id], references: [email])
-  Photos            Photos[]
-  Videos            Videos[]
-  Links             Links[]
-  Parents           Parents[]
-  Siblings          Siblings[]
-  Cousins           Cousins[]
-  Friends           Friends[]
-  Spouse            Spouse[]
-  NieceAndNephew    NieceAndNephew[]
-  Childrens         Childrens[]
-  Pets              Pets[]
-  GrandChildrens    GrandChildrens[]
-  GrandParents      GrandParents[]
-  GreatGrandParents GreatGrandParents[]
-  Orders            Orders[]
+  biography   Biography[]
+  gallery     Gallery[]
+  family      Family[]
+  guestBook   GuestBook[]
+  user        User          @relation(fields: [owner_id], references: [email])
+  Orders      Orders[]
+  SocialLinks SocialLinks[]
+  Events      Events[]
+}
+
+model SocialLinks {
+  id              Int          @id @default(autoincrement())
+  socialMediaName String?
+  link            String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  deadPersonProfiles String
+  profile            DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
+}
+
+model Events {
+  id        Int      @id @default(autoincrement())
+  year      String
+  event     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  deadPersonProfiles String
+  profile            DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
 }
 
 model Biography {
-  biography_id          Int     @id @default(autoincrement())
-  short_caption_of_life String?
-  life_summary          String?
-  personality_lifevalue String?
-  impact_on_others      String?
-  deadPersonProfiles    String
+  biography_id Int    @id @default(autoincrement())
+  discription  String
 
-  profile DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
+  deadPersonProfiles String
+  profile            DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
 }
 
 model Gallery {
-  gallery_id         Int    @id @default(autoincrement())
+  gallery_id Int     @id @default(autoincrement())
+  link       String?
+
   deadPersonProfiles String
-
-  photos Photos[]
-  videos Videos[]
-  links  Links[]
-
-  profile DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
-}
-
-model Photos {
-  photo_id           Int    @id @default(autoincrement())
-  gallery_id         Int
-  url                String
-  deadPersonProfiles String
-
-  profile DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
-  gallery Gallery           @relation(fields: [gallery_id], references: [gallery_id])
-}
-
-model Videos {
-  video_id           Int    @id @default(autoincrement())
-  gallery_id         Int
-  url                String
-  deadPersonProfiles String
-
-  profile DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
-
-  gallery Gallery @relation(fields: [gallery_id], references: [gallery_id])
-}
-
-model Links {
-  link_id            Int     @id @default(autoincrement())
-  gallery_id         Int
-  url                String?
-  deadPersonProfiles String
-
-  profile DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
-
-  gallery Gallery @relation(fields: [gallery_id], references: [gallery_id])
+  profile            DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
 }
 
 model Family {
-  family_id          Int               @id @default(autoincrement())
+  family_id    Int           @id @default(autoincrement())
+  relationship String
+  name         String
+
   deadPersonProfiles String
   profile            DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
-
-  parents           Parents[]
-  siblings          Siblings[]
-  cousins           Cousins[]
-  friends           Friends[]
-  spouse            Spouse[]
-  nieceAndNephew    NieceAndNephew[]
-  childrens         Childrens[]
-  pets              Pets[]
-  grandchildrens    GrandChildrens[]
-  grandparents      GrandParents[]
-  greatGrandparents GreatGrandParents[]
 }
 
 model GuestBook {
@@ -325,127 +297,6 @@ model GuestBookItems {
   is_approved       Boolean @default(false)
 
   profile GuestBook @relation(fields: [guestbook_id], references: [guestbook_id])
-}
-
-model Parents {
-  id                 Int    @id @default(autoincrement())
-  family_id          Int
-  name               String
-  deadPersonProfiles String
-
-  profile DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
-
-  family Family @relation(fields: [family_id], references: [family_id])
-}
-
-model Siblings {
-  id                 Int    @id @default(autoincrement())
-  family_id          Int
-  name               String
-  deadPersonProfiles String
-
-  profile DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
-
-  family Family @relation(fields: [family_id], references: [family_id])
-}
-
-model Cousins {
-  id                 Int    @id @default(autoincrement())
-  family_id          Int
-  name               String
-  deadPersonProfiles String
-
-  profile DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
-
-  family Family @relation(fields: [family_id], references: [family_id])
-}
-
-model Friends {
-  id                 Int    @id @default(autoincrement())
-  family_id          Int
-  name               String
-  deadPersonProfiles String
-
-  profile DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
-
-  family Family @relation(fields: [family_id], references: [family_id])
-}
-
-model Spouse {
-  id                 Int    @id @default(autoincrement())
-  family_id          Int
-  name               String
-  deadPersonProfiles String
-
-  profile DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
-
-  family Family @relation(fields: [family_id], references: [family_id])
-}
-
-model NieceAndNephew {
-  id                 Int    @id @default(autoincrement())
-  family_id          Int
-  name               String
-  deadPersonProfiles String
-
-  profile DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
-
-  family Family @relation(fields: [family_id], references: [family_id])
-}
-
-model Childrens {
-  id                 Int    @id @default(autoincrement())
-  family_id          Int
-  name               String
-  deadPersonProfiles String
-
-  profile DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
-
-  family Family @relation(fields: [family_id], references: [family_id])
-}
-
-model Pets {
-  id                 Int    @id @default(autoincrement())
-  family_id          Int
-  name               String
-  deadPersonProfiles String
-
-  profile DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
-
-  family Family @relation(fields: [family_id], references: [family_id])
-}
-
-model GrandChildrens {
-  id                 Int    @id @default(autoincrement())
-  family_id          Int
-  name               String
-  deadPersonProfiles String
-
-  profile DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
-
-  family Family @relation(fields: [family_id], references: [family_id])
-}
-
-model GrandParents {
-  id                 Int    @id @default(autoincrement())
-  family_id          Int
-  name               String
-  deadPersonProfiles String
-
-  profile DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
-
-  family Family @relation(fields: [family_id], references: [family_id])
-}
-
-model GreatGrandParents {
-  id                 Int    @id @default(autoincrement())
-  family_id          Int
-  name               String
-  deadPersonProfiles String
-
-  profile DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
-
-  family Family @relation(fields: [family_id], references: [family_id])
 }
 
 model Orders {
