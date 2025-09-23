@@ -112,7 +112,7 @@ async function main() {
       first_cleaning_date: new Date(),
       booking_date: new Date(),
       Flower_id: flower.flower_id,
-      status: CleaningStatus.pending,
+      status: CleaningStatus.PENDING,
     },
   });
 

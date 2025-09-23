@@ -19,7 +19,7 @@ export class WebhookService {
     private readonly ordersService: OrdersService,
     private readonly configService: ConfigService,
     private readonly errorHandler: WebhookErrorHandlerService,
-  ) {}
+  ) { }
 
   verifyWebhookSignature(
     body: Buffer,
@@ -301,7 +301,7 @@ export class WebhookService {
       const bookingId = parseInt(metadata.booking_id);
       await this.prisma.booking.update({
         where: { id: bookingId },
-        data: { is_bought: true, status: 'confirmed' },
+        data: { is_bought: true, status: 'COMPLETED' },
       });
       return {
         success: true,
@@ -319,7 +319,7 @@ export class WebhookService {
       if (booking) {
         await this.prisma.booking.update({
           where: { id: booking.id },
-          data: { is_bought: true, status: 'confirmed' },
+          data: { is_bought: true, status: 'COMPLETED' },
         });
         return {
           success: true,
@@ -439,7 +439,7 @@ export class WebhookService {
       const bookingId = parseInt(metadata.booking_id);
       await this.prisma.booking.update({
         where: { id: bookingId },
-        data: { is_bought: true, status: 'confirmed' },
+        data: { is_bought: true, status: 'COMPLETED' },
       });
       return {
         success: true,
@@ -458,12 +458,12 @@ export class WebhookService {
       if (booking) {
         await this.prisma.booking.update({
           where: { id: booking.id },
-          data: { is_bought: true, status: 'confirmed' },
+          data: { is_bought: true, status: 'COMPLETED' },
         });
-        
+
         // Log successful booking payment for redirect
         this.logger.log(`Booking payment successful - User should be redirected to bookings page for booking ID: ${booking.id}`);
-        
+
         return {
           success: true,
           message: `Booking ${booking.booking_ids} payment processed successfully via checkout session - redirecting to bookings`,
@@ -485,14 +485,14 @@ export class WebhookService {
     try {
       // You could implement a webhook log table to track processed events
       // For now, we'll use a simple in-memory cache or implement basic logging
-      
+
       // This is a placeholder - implement based on your database schema
       // Example:
       // const existingLog = await this.prisma.webhookLog.findUnique({
       //   where: { eventId }
       // });
       // return !!existingLog;
-      
+
       return false; // For now, always process (remove this line when implementing proper logging)
     } catch (error) {
       this.logger.error('Failed to check existing webhook event:', error.stack);

@@ -1,6 +1,6 @@
 import { PrismaService } from "src/prisma/prisma.service";
 import { CreateBookingDto } from "./dto/booking.dto";
-import { Injectable, HttpStatus } from "@nestjs/common";
+import { Injectable, HttpStatus, NotFoundException, ForbiddenException } from "@nestjs/common";
 import { StripeService } from "src/stripe/stripe.service";
 import { generateOrderIdforService } from "src/utils/code-generator.util";
 import { ChurchService } from "src/church/church.service";
@@ -79,7 +79,7 @@ export class BookingService {
         booking_date: new Date(),
         anniversary_date: death_anniversary_date,
         no_of_subscription_years: no_of_subsribe_years ?? 0,
-        status: 'pending',
+        status: 'PENDING',
         is_bought: false,
       },
     });
@@ -160,8 +160,8 @@ export class BookingService {
           currency: 'usd',
           status: booking.status,
           payment_status: checkoutSession.payment_status || 'pending',
-          expires_at: checkoutSession.expires_at 
-            ? new Date(checkoutSession.expires_at * 1000).toISOString() 
+          expires_at: checkoutSession.expires_at
+            ? new Date(checkoutSession.expires_at * 1000).toISOString()
             : undefined,
         });
       } catch (error) {
@@ -181,9 +181,9 @@ export class BookingService {
     cancelUrl?: string
   ): Promise<BookingWithCheckoutDto | null> {
     const booking = await this.prisma.booking.findFirst({
-      where: { 
+      where: {
         id: booking_id,
-        User_id: user_id 
+        User_id: user_id
       },
       include: {
         Church: true,
@@ -215,13 +215,160 @@ export class BookingService {
         checkout_url: checkoutSession.url!,
         session_id: checkoutSession.id,
         payment_status: checkoutSession.payment_status || 'pending',
-        expires_at: checkoutSession.expires_at 
-          ? new Date(checkoutSession.expires_at * 1000).toISOString() 
+        expires_at: checkoutSession.expires_at
+          ? new Date(checkoutSession.expires_at * 1000).toISOString()
           : undefined,
       };
     } catch (error) {
       throw new Error(`Failed to create checkout link for booking: ${error.message}`);
     }
+  }
+
+  async getUserBookingStatus(userId: number, page = 1, limit = 10) {
+    const skip = (page - 1) * limit;
+
+    const [bookings, total] = await this.prisma.$transaction([
+      this.prisma.booking.findMany({
+        where: { User_id: userId }, // <-- only this user's bookings
+        select: {
+          booking_ids: true,
+          name_on_memorial: true,
+          first_cleaning_date: true,
+          second_cleaning_date: true,
+          status: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' }, // latest first
+        skip,
+        take: limit,
+      }),
+      this.prisma.booking.count({ where: { User_id: userId } }),
+    ]);
+
+    if (!bookings || bookings.length === 0) {
+      throw new NotFoundException('No bookings found for this user');
+    }
+
+    return {
+      message: 'User bookings fetched successfully',
+      data: bookings,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+      status: HttpStatus.OK,
+    };
+  }
+
+
+
+  // USER: Check single booking status by booking id
+  async getBookingStatusByBookingId(userId: number, bookingId: string) {
+    const booking = await this.prisma.booking.findUnique({
+      where: { booking_ids: bookingId },
+    });
+
+    if (!booking) throw new NotFoundException('Booking not found');
+
+    if (booking.User_id !== userId) {
+      throw new ForbiddenException('You are not allowed to access this booking');
+    }
+
+    return {
+      message: 'Booking fetched successfully',
+      data: {
+        booking_ids: booking.booking_ids,
+        status: booking.status,
+        first_cleaning_date: booking.first_cleaning_date,
+        second_cleaning_date: booking.second_cleaning_date,
+      },
+      status: HttpStatus.OK,
+    };
+  }
+
+  //Admin only API
+  // ADMIN: Update booking status
+  async updateBookingStatus(bookingId: string, dto: UpdateBookingstatusDto) {
+    const booking = await this.prisma.booking.findUnique({
+      where: { booking_ids: bookingId },
+    });
+
+    if (!booking) {
+      throw new NotFoundException('Booking not found');
+    }
+
+    const updatedBooking = await this.prisma.booking.update({
+      where: { booking_ids: bookingId },
+      data: { status: dto.status },
+    });
+
+    return {
+      message: 'Booking status updated successfully',
+      data: updatedBooking,
+      status: HttpStatus.OK,
+    };
+  }
+
+  //Admin only API
+  async getUserBookingStatusByAdmin(page = 1, limit = 10) {
+    const skip = (page - 1) * limit;
+
+    const [bookings, total] = await this.prisma.$transaction([
+      this.prisma.booking.findMany({
+        select: {
+          user: {
+            select: { email: true }
+          },
+          booking_ids: true,
+          name_on_memorial: true,
+          first_cleaning_date: true,
+          second_cleaning_date: true,
+          status: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' }, // latest first
+        skip,
+        take: limit,
+      }),
+      this.prisma.booking.count(),
+    ]);
+
+    if (!bookings || bookings.length === 0) {
+      throw new NotFoundException('No bookings found for this user');
+    }
+    return {
+      message: 'User bookings fetched successfully',
+      data: bookings,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+      status: HttpStatus.OK,
+    };
+  }
+
+
+  //Admin only API
+  // USER: Check single booking status by booking id
+  async getBookingStatusByBookingIdByAdmin(userId: number, bookingId: string) {
+    const booking = await this.prisma.booking.findUnique({
+      where: { booking_ids: bookingId },
+    });
+    if (!booking) throw new NotFoundException('Booking not found');
+    return {
+      message: 'Booking fetched successfully',
+      data: {
+        booking_ids: booking.booking_ids,
+        status: booking.status,
+        first_cleaning_date: booking.first_cleaning_date,
+        second_cleaning_date: booking.second_cleaning_date,
+      },
+      status: HttpStatus.OK,
+    };
   }
 
   // ##need to connect stripe webhook to confirm payment and thereafter booking

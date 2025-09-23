@@ -1,8 +1,11 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req, Query } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
+import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
+import { RolesGuard } from 'src/common/decoraters/roles.guard';
+import { Roles } from 'src/common/decoraters/roles.decorator';
 
 @Controller('orders')
 export class OrdersController {
@@ -13,14 +16,24 @@ export class OrdersController {
     return this.ordersService.create(createOrderDto);
   }
 
-  @Get()
-  findAll() {
-    return this.ordersService.findAll();
+  @UseGuards(JwtAuthGuard)
+  @Get('my-orders')
+  async getMyOrders(
+    @Req() req,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const pageNum = parseInt(page || '1', 10);
+    const limitNum = parseInt(limit || '10', 10);
+
+    return this.ordersService.findAll(req.user.id, pageNum, limitNum);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.ordersService.findOne(+id);
+
+  @UseGuards(JwtAuthGuard)
+  @Get('my-orders/:id')
+  async getMyOrderById(@Req() req, @Param('id') id: string) {
+    return this.ordersService.findOne(parseInt(id, 10), req.user.id);
   }
 
   @Patch(':id')
@@ -36,6 +49,27 @@ export class OrdersController {
   @Patch(":id/status")
   updateStatus(@Param('id') id: string, @Body() updatestatusdto: UpdateOrderStatusDto) {
     return this.ordersService.updateStatus(+id, updatestatusdto)
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @Get('all-orders')
+  async getMyOrdersByAdmin(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const pageNum = parseInt(page || '1', 10);
+    const limitNum = parseInt(limit || '10', 10);
+
+    return this.ordersService.findAllByAdmin(pageNum, limitNum);
+  }
+
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @Get('all-orders/:id')
+  async getMyOrderByIdByAdmin(@Req() req, @Param('id') id: string) {
+    return this.ordersService.findOneByAdmin(parseInt(id, 10));
   }
 
 }
