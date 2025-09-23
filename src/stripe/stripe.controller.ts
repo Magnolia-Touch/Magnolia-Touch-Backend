@@ -2,7 +2,6 @@ import { Controller, Post, HttpCode, HttpStatus, Headers, Req, Body, Query, Requ
 import { StripeService } from './stripe.service';
 import { UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
-import { RolesGuard } from 'src/common/decoraters/roles.guard';
 import { CheckoutDto } from './dto/checkout.dto';
 import { CheckoutSessionDto } from './dto/checkout-session.dto';
 import { ServiceBookingDto } from './dto/service-booking.dto';
@@ -23,15 +22,10 @@ export class StripeController {
     @Request() req,
   ) {
     const { email, id } = req.user;
-    const { productId, quantity, cartId } = checkoutdto;
-
-    return this.stripeService.createPaymentIntentforProduct(
+    return this.stripeService.createPaymentIntentforQR(
       checkoutdto,
       email,
-      id,
-      productId,
-      quantity,
-      cartId,
+      id
     );
   }
 
@@ -48,7 +42,7 @@ export class StripeController {
     const booking = await this.prisma.booking.findUnique({
       where: { id: booking_id }
     });
-    
+
     if (!booking) {
       throw new Error('Booking not found');
     }
@@ -69,15 +63,10 @@ export class StripeController {
     @Request() req,
   ) {
     const { email, id } = req.user;
-    const { productId, quantity, cartId } = checkoutSessionDto;
-
-    return this.stripeService.createCheckoutSessionforProduct(
+    return this.stripeService.createCheckoutSessionforQr(
       checkoutSessionDto,
       email,
       id,
-      productId,
-      quantity,
-      cartId,
     );
   }
 
@@ -94,7 +83,7 @@ export class StripeController {
     const booking = await this.prisma.booking.findUnique({
       where: { id: booking_id }
     });
-    
+
     if (!booking) {
       throw new Error('Booking not found');
     }
@@ -107,7 +96,7 @@ export class StripeController {
     );
   }
 
-@Post('webhook')
+  @Post('webhook')
   @HttpCode(HttpStatus.OK)
   async handleWebhook(
     @Req() request: any,

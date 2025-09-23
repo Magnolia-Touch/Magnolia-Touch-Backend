@@ -13,7 +13,7 @@ export class AuthService {
         private jwtService: JwtService,
         private prisma: PrismaService,
         private userService: UserService
-    ) {}
+    ) { }
 
     async register(registerDto: RegisterDto) {
         const { email, password, customer_name, Phone } = registerDto;
@@ -143,22 +143,22 @@ export class AuthService {
     }
 
 
-   async getAllUsers(query: PaginationQueryDto = { page: 1, limit: 10 }) {
-    const page = Number(query.page) || 1;
-    const limit = Number(query.limit) || 10;
-    const skip = (page - 1) * limit;
+    async getAllUsers(query: PaginationQueryDto = { page: 1, limit: 10 }) {
+        const page = Number(query.page) || 1;
+        const limit = Number(query.limit) || 10;
+        const skip = (page - 1) * limit;
 
-    const [users, total] = await this.prisma.$transaction([
-        this.prisma.user.findMany({ skip, take: limit }),
-        this.prisma.user.count(),
-    ]);
+        const [users, total] = await this.prisma.$transaction([
+            this.prisma.user.findMany({ skip, take: limit }),
+            this.prisma.user.count(),
+        ]);
 
-    return {
-        data: users,
-        total,
-        page,
-        lastPage: Math.ceil(total / limit),
-    };
+        return {
+            data: users,
+            total,
+            page,
+            lastPage: Math.ceil(total / limit),
+        };
     }
 
 
@@ -184,53 +184,51 @@ export class AuthService {
     async userProfile(userId: number) {
         const user = await this.prisma.user.findUnique({
             where: { customer_id: userId },
-            select:{
+            select: {
                 customer_name: true,
                 email: true,
                 Phone: true,
                 Booking: {
                     select: {
-                    booking_ids: true,
-                    name_on_memorial: true,
-                    plot_no: true,
-                    amount: true,
-                    first_cleaning_date: true,
-                    second_cleaning_date: true,
-                    booking_date: true,
-                    anniversary_date: true,
-                    no_of_subscription_years: true,
-                    status: true,
-                    Church: {
-                        select: {
-                        church_name: true,
+                        booking_ids: true,
+                        name_on_memorial: true,
+                        plot_no: true,
+                        amount: true,
+                        first_cleaning_date: true,
+                        second_cleaning_date: true,
+                        booking_date: true,
+                        anniversary_date: true,
+                        no_of_subscription_years: true,
+                        status: true,
+                        Church: {
+                            select: {
+                                church_name: true,
+                            },
                         },
-                    },
-                    flower: {
-                        select: {
-                            Name: true
-                        }
-                    },
-                    subscription: {
-                        select: {
-                            Subscription_name: true,
-                            Price: true,
-                        
+                        flower: {
+                            select: {
+                                Name: true
+                            }
+                        },
+                        subscription: {
+                            select: {
+                                Subscription_name: true,
+                                Price: true,
+                            }
                         }
                     }
-
-                }
-            },
-            deadPersonProfiles: {
-                select: {
-                    name: true,
-    
-                    profile_image: true,
-                    born_date: true,
-                    death_date: true,
-                    memorial_place: true,
+                },
+                deadPersonProfiles: {
+                    select: {
+                        firstName: true,
+                        lastName: true,
+                        profile_image: true,
+                        born_date: true,
+                        death_date: true,
+                        memorial_place: true,
+                    }
                 }
             }
-        }
         });
 
         if (!user) {

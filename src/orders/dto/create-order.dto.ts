@@ -1,20 +1,5 @@
 import { IsInt, IsOptional, IsString, IsEnum, IsDecimal, IsArray, ValidateNested } from 'class-validator';
-import { Type } from 'class-transformer';
 import { OrderStatus } from '@prisma/client';
-
-class CreateOrderItemDto {
-  @IsInt()
-  productId: number;
-
-  @IsInt()
-  quantity: number;
-
-  @IsDecimal()
-  price: number;
-
-  @IsDecimal()
-  total: number;
-}
 
 export class CreateOrderDto {
   @IsInt()
@@ -29,38 +14,29 @@ export class CreateOrderDto {
   @IsDecimal()
   totalAmount: number;
 
-//   @IsOptional()
-//   @IsDecimal()
-//   shippingCost: number;
-
-//   @IsOptional()
-//   @IsDecimal()
-//   taxAmount: number;
-
-//   @IsOptional()
-//   @IsDecimal()
-//   discountAmount: number;
-
   @IsOptional()
   @IsString()
   notes?: string;
 
+  @IsOptional()
   @IsInt()
-  shippingAddressId: number;
+  shippingAddressId?: number;   // ✅ fixed name
 
   @IsInt()
-  billingAddressId: number;
+  billingAddressId: number;     // ✅ required, fixed name
+
+  @IsOptional()
+  @IsInt()
+  church_id?: number;
 
   @IsOptional()
   @IsString()
   tracking_details?: string;
 
+  @IsString()
+  memoryProfileId: string;
+
   @IsOptional()
   @IsInt()
   delivery_agent_id?: number;
-
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => CreateOrderItemDto)
-  items: CreateOrderItemDto[];
 }

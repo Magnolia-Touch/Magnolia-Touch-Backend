@@ -28,11 +28,19 @@ enum OrderStatus {
   refunded
 }
 
+enum SocialNames {
+  FACEBOOK
+  INSTAGRAM
+  TWITTER
+  YOUTUBE
+}
+
 enum CleaningStatus {
   pending
   confirmed
   cleaned
 }
+
 
 model User {
   customer_id   Int    @id @default(autoincrement())
@@ -41,6 +49,8 @@ model User {
   Phone         String
   password      String
   role          Role   @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   Orders               Orders[]
   Church               Church[]
@@ -50,7 +60,6 @@ model User {
   BillingAddress       BillingAddress[]
   Cart                 Cart[]
   deadPersonProfiles   DeadPersonProfile[]
-  OrderItems           OrderItems[]
   DeliveryAgentProfile DeliveryAgentProfile[]
 }
 
@@ -63,6 +72,8 @@ model UserAddress {
   postcode        String
   phone           String
   email           String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   User            User?    @relation(fields: [userCustomer_id], references: [customer_id])
   userCustomer_id Int?
@@ -80,6 +91,8 @@ model BillingAddress {
   email           String
   User            User?    @relation(fields: [userCustomer_id], references: [customer_id])
   userCustomer_id Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   Orders          Orders[]
 }
 
@@ -91,7 +104,8 @@ model Products {
   short_Description    String             @db.Text
   detailed_description String?            @db.Text
   company_guarantee    String?            @db.Text
-  orderItems           OrderItems[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   Dimensions           ProductDimension[]
   CartItem             CartItem[]
 }
@@ -102,7 +116,10 @@ model Services {
   name        String
   discription String
   features    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
+
 
 model Cart {
   cartId       Int        @id @default(autoincrement())
@@ -111,6 +128,7 @@ model Cart {
   total_amount String
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
+
 
   user User @relation(fields: [userId], references: [customer_id])
 }
@@ -121,6 +139,8 @@ model CartItem {
   productId Int
   quantity  Int
   price     Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   cart    Cart     @relation(fields: [cartId], references: [cartId])
   product Products @relation(fields: [productId], references: [product_id])
@@ -131,6 +151,8 @@ model ProductDimension {
   dimension          String
   Products           Products? @relation(fields: [productsProduct_id], references: [product_id])
   productsProduct_id Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model SubscriptionPlan {
@@ -139,18 +161,21 @@ model SubscriptionPlan {
   Subscription_name String
   Frequency         Int
   Price             String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   bookings Booking[]
 }
 
 model Flowers {
   flower_id Int @id @default(autoincrement())
-
-  image       String
+  image       String?
   Name        String
   Price       String
   Description String?
   in_stock    Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   bookings Booking[]
 }
@@ -163,26 +188,32 @@ model Church {
   church_address  String?
   User            User?     @relation(fields: [userCustomer_id], references: [customer_id])
   userCustomer_id Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   Booking         Booking[]
+  Orders          Orders[]
 }
 
 model Booking {
-  id                       Int       @id @default(autoincrement())
-  booking_ids              String    @unique
+  id                       Int            @id @default(autoincrement())
+  booking_ids              String         @unique
   name_on_memorial         String
   plot_no                  String?
   User_id                  Int
   church_id                Int
   Subscription_id          Int
-  amount                   Int       @default(0)
+  amount                   Int            @default(0)
   first_cleaning_date      DateTime
   second_cleaning_date     DateTime?
-  no_of_subscription_years Int       @default(1)
+  no_of_subscription_years Int            @default(1)
   Flower_id                Int?
   booking_date             DateTime
   anniversary_date         DateTime?
   status                   CleaningStatus @default(pending)
-  is_bought                Boolean   @default(false)
+  is_bought                Boolean        @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   user         User             @relation(fields: [User_id], references: [customer_id])
   Church       Church           @relation(fields: [church_id], references: [church_id])
@@ -195,6 +226,8 @@ model Reviews {
   User_Id            Int
   Review_Description String
   Rating             Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   user User @relation(fields: [User_Id], references: [customer_id])
 }
@@ -202,111 +235,89 @@ model Reviews {
 model DeadPersonProfile {
   profile_id       Int     @id @default(autoincrement())
   owner_id         String
-  name             String?
+  firstName        String
+  lastName         String
   profile_image    String?
   background_image String?
-  born_date        String?
-  death_date       String?
+  born_date        String
+  death_date       String
   memorial_place   String?
+  is_paid          Boolean @default(false)
   slug             String  @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  biography         Biography[]
-  gallery           Gallery[]
-  family            Family[]
-  guestBook         GuestBook[]
-  user              User                @relation(fields: [owner_id], references: [email])
-  Photos            Photos[]
-  Videos            Videos[]
-  Links             Links[]
-  Parents           Parents[]
-  Siblings          Siblings[]
-  Cousins           Cousins[]
-  Friends           Friends[]
-  Spouse            Spouse[]
-  NieceAndNephew    NieceAndNephew[]
-  Childrens         Childrens[]
-  Pets              Pets[]
-  GrandChildrens    GrandChildrens[]
-  GrandParents      GrandParents[]
-  GreatGrandParents GreatGrandParents[]
+  biography   Biography[]
+  gallery     Gallery[]
+  family      Family[]
+  guestBook   GuestBook[]
+  user        User          @relation(fields: [owner_id], references: [email])
+  Orders      Orders[]
+  SocialLinks SocialLinks[]
+  Events      Events[]
+}
+
+model SocialLinks {
+  id              Int          @id @default(autoincrement())
+  socialMediaName String?
+  link            String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+
+  deadPersonProfiles String
+  profile            DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
+}
+
+model Events {
+  id        Int      @id @default(autoincrement())
+  year      String
+  event     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+
+  deadPersonProfiles String
+  profile            DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
 }
 
 model Biography {
-  biography_id          Int     @id @default(autoincrement())
-  short_caption_of_life String?
-  life_summary          String?
-  personality_lifevalue String?
-  impact_on_others      String?
-  deadPersonProfiles    String
+  biography_id Int    @id @default(autoincrement())
+  discription  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  profile DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
+  deadPersonProfiles String
+  profile            DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
 }
 
 model Gallery {
-  gallery_id         Int    @id @default(autoincrement())
+  gallery_id Int     @id @default(autoincrement())
+  link       String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   deadPersonProfiles String
-
-  photos Photos[]
-  videos Videos[]
-  links  Links[]
-
-  profile DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
-}
-
-model Photos {
-  photo_id           Int    @id @default(autoincrement())
-  gallery_id         Int
-  url                String
-  deadPersonProfiles String
-
-  profile DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
-  gallery Gallery           @relation(fields: [gallery_id], references: [gallery_id])
-}
-
-model Videos {
-  video_id           Int    @id @default(autoincrement())
-  gallery_id         Int
-  url                String
-  deadPersonProfiles String
-
-  profile DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
-
-  gallery Gallery @relation(fields: [gallery_id], references: [gallery_id])
-}
-
-model Links {
-  link_id            Int     @id @default(autoincrement())
-  gallery_id         Int
-  url                String?
-  deadPersonProfiles String
-
-  profile DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
-
-  gallery Gallery @relation(fields: [gallery_id], references: [gallery_id])
+  profile            DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
 }
 
 model Family {
-  family_id          Int               @id @default(autoincrement())
+  family_id    Int           @id @default(autoincrement())
+  relationship String
+  name         String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   deadPersonProfiles String
   profile            DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
-
-  parents           Parents[]
-  siblings          Siblings[]
-  cousins           Cousins[]
-  friends           Friends[]
-  spouse            Spouse[]
-  nieceAndNephew    NieceAndNephew[]
-  childrens         Childrens[]
-  pets              Pets[]
-  grandchildrens    GrandChildrens[]
-  grandparents      GrandParents[]
-  greatGrandparents GreatGrandParents[]
 }
 
 model GuestBook {
   guestbook_id       Int              @id @default(autoincrement())
   guestBookItems     GuestBookItems[]
   deadPersonProfiles String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   profile DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
 }
@@ -322,177 +333,48 @@ model GuestBookItems {
   photo_upload      String?
   date              String
   is_approved       Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   profile GuestBook @relation(fields: [guestbook_id], references: [guestbook_id])
 }
 
-model Parents {
-  id                 Int    @id @default(autoincrement())
-  family_id          Int
-  name               String
-  deadPersonProfiles String
-
-  profile DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
-
-  family Family @relation(fields: [family_id], references: [family_id])
-}
-
-model Siblings {
-  id                 Int    @id @default(autoincrement())
-  family_id          Int
-  name               String
-  deadPersonProfiles String
-
-  profile DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
-
-  family Family @relation(fields: [family_id], references: [family_id])
-}
-
-model Cousins {
-  id                 Int    @id @default(autoincrement())
-  family_id          Int
-  name               String
-  deadPersonProfiles String
-
-  profile DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
-
-  family Family @relation(fields: [family_id], references: [family_id])
-}
-
-model Friends {
-  id                 Int    @id @default(autoincrement())
-  family_id          Int
-  name               String
-  deadPersonProfiles String
-
-  profile DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
-
-  family Family @relation(fields: [family_id], references: [family_id])
-}
-
-model Spouse {
-  id                 Int    @id @default(autoincrement())
-  family_id          Int
-  name               String
-  deadPersonProfiles String
-
-  profile DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
-
-  family Family @relation(fields: [family_id], references: [family_id])
-}
-
-model NieceAndNephew {
-  id                 Int    @id @default(autoincrement())
-  family_id          Int
-  name               String
-  deadPersonProfiles String
-
-  profile DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
-
-  family Family @relation(fields: [family_id], references: [family_id])
-}
-
-model Childrens {
-  id                 Int    @id @default(autoincrement())
-  family_id          Int
-  name               String
-  deadPersonProfiles String
-
-  profile DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
-
-  family Family @relation(fields: [family_id], references: [family_id])
-}
-
-model Pets {
-  id                 Int    @id @default(autoincrement())
-  family_id          Int
-  name               String
-  deadPersonProfiles String
-
-  profile DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
-
-  family Family @relation(fields: [family_id], references: [family_id])
-}
-
-model GrandChildrens {
-  id                 Int    @id @default(autoincrement())
-  family_id          Int
-  name               String
-  deadPersonProfiles String
-
-  profile DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
-
-  family Family @relation(fields: [family_id], references: [family_id])
-}
-
-model GrandParents {
-  id                 Int    @id @default(autoincrement())
-  family_id          Int
-  name               String
-  deadPersonProfiles String
-
-  profile DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
-
-  family Family @relation(fields: [family_id], references: [family_id])
-}
-
-model GreatGrandParents {
-  id                 Int    @id @default(autoincrement())
-  family_id          Int
-  name               String
-  deadPersonProfiles String
-
-  profile DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
-
-  family Family @relation(fields: [family_id], references: [family_id])
-}
-
 model Orders {
-  id                Int          @id @default(autoincrement())
-  User_id           Int          @unique
-  orderNumber       String       @unique
-  status            OrderStatus  @default(pending)
-  totalAmount       Decimal      @db.Decimal(10, 2)
-  shippingCost      Decimal      @default(0) @db.Decimal(10, 2)
-  taxAmount         Decimal      @default(0) @db.Decimal(10, 2)
-  discountAmount    Decimal      @default(0) @db.Decimal(10, 2)
+  id                Int         @id @default(autoincrement())
+  User_id           Int         @unique
+  orderNumber       String      @unique
+  status            OrderStatus @default(pending)
+  totalAmount       Decimal     @db.Decimal(10, 2)
+  shippingCost      Decimal     @default(0) @db.Decimal(10, 2)
+  taxAmount         Decimal     @default(0) @db.Decimal(10, 2)
+  discountAmount    Decimal     @default(0) @db.Decimal(10, 2)
   notes             String?
-  shippingAddressId Int
+  memoryProfileId   String
+  is_paid           Boolean     @default(false)
+  shippingAddressId Int?
   billingAddressId  Int
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
-  items             OrderItems[]
+  church_id         Int?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
   tracking_details  String?
   delivery_agent_id Int?
 
   user                   User                  @relation(fields: [User_id], references: [customer_id])
-  useraddress            UserAddress           @relation(fields: [shippingAddressId], references: [deli_address_id])
-  billingaddress         BillingAddress        @relation(fields: [billingAddressId], references: [bill_address_id])
+  useraddress            UserAddress?          @relation(fields: [shippingAddressId], references: [deli_address_id])
+  billingaddress         BillingAddress?       @relation(fields: [billingAddressId], references: [bill_address_id])
+  churchAddress          Church?               @relation(fields: [church_id], references: [church_id])
+  deadpersonprofile      DeadPersonProfile     @relation(fields: [memoryProfileId], references: [slug])
   DeliveryAgentProfile   DeliveryAgentProfile? @relation(fields: [deliveryAgentProfileId], references: [id])
   deliveryAgentProfileId Int?
 
   @@map("orders")
 }
 
-model OrderItems {
-  id        Int     @id @default(autoincrement())
-  order_id  Int     @unique
-  productId Int
-  quantity  Int
-  price     Decimal @db.Decimal(10, 2)
-  total     Decimal @db.Decimal(10, 2)
-
-  order           Orders   @relation(fields: [order_id], references: [id], onDelete: Cascade)
-  product         Products @relation(fields: [productId], references: [product_id])
-  User            User?    @relation(fields: [userCustomer_id], references: [customer_id])
-  userCustomer_id Int?
-
-  @@map("order_items")
-}
-
 model DeliveryAgentProfile {
   id               Int      @id @default(autoincrement())
   deliveryagent_id Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   orders           Orders[]
 
   User User? @relation(fields: [deliveryagent_id], references: [customer_id])

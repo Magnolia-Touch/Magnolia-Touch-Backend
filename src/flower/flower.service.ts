@@ -73,4 +73,83 @@ export class FlowersService {
       status: HttpStatus.OK,
     }
   }
+
+  async updateFlower(
+    flower_id: number,
+    dto: Partial<CreateFlowerDto>, // partial to allow updating some fields
+    image?: Express.Multer.File
+  ) {
+    // find the flower
+    const flower = await this.prisma.flowers.findUnique({ where: { flower_id } });
+    if (!flower) {
+      throw new NotFoundException('Flower not found');
+    }
+
+    let imageUrl = flower.image;
+
+    // If image is passed, validate + upload new one
+    if (image) {
+      const allowedImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      if (!this.s3Service.validateFileType(image, allowedImageTypes)) {
+        throw new BadRequestException('Invalid image type. Only JPEG, PNG, GIF, and WebP images are allowed.');
+      }
+
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (!this.s3Service.validateFileSize(image, maxSize)) {
+        throw new BadRequestException('Image size too large. Maximum size is 5MB.');
+      }
+
+      // delete old image from S3
+      if (flower.image) {
+        await this.s3Service.deleteFile(flower.image); // you should have deleteFile method
+      }
+
+      // upload new image
+      imageUrl = await this.s3Service.uploadFile(image, 'flowers');
+    }
+
+    // update flower
+    const updatedFlower = await this.prisma.flowers.update({
+      where: { flower_id },
+      data: {
+        image: imageUrl,
+        Name: dto.Name ?? flower.Name,
+        Description: dto.Description ?? flower.Description,
+        Price: dto.Price ?? flower.Price,
+        in_stock: dto.in_stock ?? flower.in_stock,
+      },
+    });
+
+    return {
+      message: 'Flower updated successfully',
+      data: updatedFlower,
+      status: HttpStatus.OK,
+    };
+  }
+
+  async deleteFlower(flower_id: number) {
+    // find flower
+    const flower = await this.prisma.flowers.findUnique({ where: { flower_id } });
+    if (!flower) {
+      throw new NotFoundException('Flower not found');
+    }
+
+    // delete image from S3
+    if (flower.image) {
+      await this.s3Service.deleteFile(flower.image); // make sure this method exists
+    }
+
+    // delete flower from DB
+    await this.prisma.flowers.delete({
+      where: { flower_id },
+    });
+
+    return {
+      message: 'Flower deleted successfully',
+      data: null,
+      status: HttpStatus.OK,
+    };
+  }
+
+
 }

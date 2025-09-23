@@ -6,6 +6,8 @@ import { CreateFamilyMemberDto } from './dto/create-family.dto';
 import { CreateGuestBookDto } from './dto/create-guestbook.dto';
 import { generateCode } from 'src/utils/code-generator.util'; // adjust path if needed
 import { HttpStatus } from '@nestjs/common';
+import { CreateProfileDto } from './dto/create-profile.dto';
+import { contains } from 'class-validator';
 
 @Injectable()
 export class MemorialProfileService {
@@ -14,19 +16,12 @@ export class MemorialProfileService {
     private s3Service: S3Service
   ) { }
 
-  //Create profile for Dead Person
-  async create(dto: Partial<CreateDeadPersonProfileDto>, email: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { email },
-    });
-
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
+  async create(dto: CreateProfileDto, email: string) {
+    // generate unique slug
     let uniqueSlug = '';
     let isUnique = false;
     while (!isUnique) {
-      const tempSlug = generateCode(); // e.g., random string like 'x7f8k9'
+      const tempSlug = generateCode();
       const existing = await this.prisma.deadPersonProfile.findUnique({
         where: { slug: tempSlug },
       });
@@ -35,41 +30,80 @@ export class MemorialProfileService {
         isUnique = true;
       }
     }
+
+    // main profile
     const profile = await this.prisma.deadPersonProfile.create({
       data: {
         owner_id: email,
+        firstName: dto.firstName,
+        lastName: dto.lastName,
+        born_date: dto.born_date,
+        death_date: dto.death_date,
+        memorial_place: dto.memorial_place,
+        profile_image: dto.profile_image,
+        background_image: dto.background_image,
+        is_paid: dto.is_paid ?? false,
         slug: uniqueSlug,
+
+        // Nested creates
+        biography: {
+          create: (dto.biography ?? []).map((b) => ({
+            discription: b.discription,
+          })),
+        },
+        gallery: {
+          create: (dto.gallery ?? []).map((g) => ({
+            link: g.link,
+          })),
+        },
+        family: {
+          create: (dto.family ?? []).map((f) => ({
+            relationship: f.relationship,
+            name: f.name,
+          })),
+        },
+
+        // always create a guestBook
+        guestBook: {
+          create: {},
+        },
+        SocialLinks: {
+          create: (dto.socialLinks ?? []).map((s) => ({
+            socialMediaName: s.socialMediaName, // undefined if not provided
+            link: s.link,
+          })),
+        },
+        Events: {
+          create: (dto.events ?? []).map((e) => ({
+            year: e.year,
+            event: e.event,
+          })),
+        },
+      },
+      include: {
+        biography: true,
+        gallery: true,
+        family: true,
+        guestBook: { include: { guestBookItems: true } },
+        SocialLinks: true,
+        Events: true,
       },
     });
-    const biography = await this.prisma.biography.create({
-      data: {
-        deadPersonProfiles: uniqueSlug
-      }
-    })
-    const gallery = await this.prisma.gallery.create({
-      data: {
-        deadPersonProfiles: uniqueSlug
-      }
-    })
-    const family = await this.prisma.family.create({
-      data: {
-        deadPersonProfiles: uniqueSlug
-      }
-    })
-    const guestbook = await this.prisma.guestBook.create({
-      data: {
-        deadPersonProfiles: uniqueSlug
-      }
-    })
-    return { profile, biography, gallery, family, guestbook };
 
+    return profile;
   }
+
 
   async getProfile(slug: string) {
     const profile = await this.prisma.deadPersonProfile.findUnique({
       where: { slug },
       include: {
         biography: true,
+        family: true,
+        gallery: true,
+        guestBook: true,
+        Events: true,
+        SocialLinks: true
       },
     });
 
@@ -87,7 +121,6 @@ export class MemorialProfileService {
 
   async addGuestbook(slug: string, dto: CreateGuestBookDto, image: Express.Multer.File) {
     const { first_name, last_name, guestemail, phone, message } = dto;
-    
     let imageUrl: string | null = null;
     if (image) {
       // Upload image to S3
@@ -95,15 +128,12 @@ export class MemorialProfileService {
       if (!this.s3Service.validateFileType(image, allowedImageTypes)) {
         throw new BadRequestException('Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed.');
       }
-      
       const maxSize = 5 * 1024 * 1024; // 5MB
       if (!this.s3Service.validateFileSize(image, maxSize)) {
         throw new BadRequestException('File size too large. Maximum size is 5MB.');
       }
-      
       imageUrl = await this.s3Service.uploadFile(image, `guestbook/${slug}/images`);
     }
-    
     const date = new Date().toISOString(); // Get current date in ISO format
     const profile = await this.prisma.deadPersonProfile.findUnique({
       where: { slug },
@@ -114,7 +144,6 @@ export class MemorialProfileService {
     if (!profile || !profile.guestBook.length) {
       throw new NotFoundException('Guestbook not found for this profile');
     }
-
     const guestbook_id = profile.guestBook[0].guestbook_id;
     const created = await this.prisma.guestBookItems.create({
       data: {
@@ -339,24 +368,7 @@ export class MemorialProfileService {
 
   async getFamily(slug: string) {
     const profile = await this.prisma.deadPersonProfile.findUnique({
-      where: { slug },
-      include: {
-        family: {
-          include: {
-            parents: true,
-            siblings: true,
-            cousins: true,
-            friends: true,
-            spouse: true,
-            nieceAndNephew: true,
-            childrens: true,
-            pets: true,
-            grandchildrens: true,
-            grandparents: true,
-            greatGrandparents: true
-          }
-        }
-      },
+      where: { slug }
     });
 
     if (!profile) {
@@ -384,20 +396,7 @@ export class MemorialProfileService {
     }
     // Fetch the family by slug, including all possible relations
     const family = await this.prisma.family.findFirst({
-      where: { deadPersonProfiles: slug },
-      include: {
-        parents: true,
-        siblings: true,
-        cousins: true,
-        friends: true,
-        spouse: true,
-        nieceAndNephew: true,
-        childrens: true,
-        pets: true,
-        grandchildrens: true,
-        grandparents: true,
-        greatGrandparents: true,
-      },
+      where: { deadPersonProfiles: slug }
     });
     if (!family) {
       throw new NotFoundException('Family not found for this profile');
@@ -530,11 +529,7 @@ export class MemorialProfileService {
       where: { slug },
       include: {
         gallery: {
-          include: {
-            photos: true,
-            videos: true,
-            links: true
-          }
+          select: { link: true }
         }
       },
     });
@@ -855,4 +850,109 @@ export class MemorialProfileService {
       status: HttpStatus.CREATED,
     };
   }
+
+  async getAllMemoryProfile(query: any) {
+    // pagination
+    const page = parseInt(query.page, 10) || 1;
+    const limit = parseInt(query.limit, 10) || 10;
+    const skip = (page - 1) * limit;
+
+    // search term
+    const search = query.search || '';
+
+    // born_date filter (exact or range)
+    const bornDateFrom = query.bornDateFrom;
+    const bornDateTo = query.bornDateTo;
+
+    // death_date filter (exact or range)
+    const deathDateFrom = query.deathDateFrom;
+    const deathDateTo = query.deathDateTo;
+
+    // Build where clause dynamically
+    const where: any = {};
+
+    // SEARCH across firstName, lastName, description, slug
+    if (search) {
+      where.OR = [
+        { firstName: { contains: search, mode: 'insensitive' } },
+        { lastName: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+        { slug: { contains: search.toLowerCase() } },
+      ];
+    }
+
+    // FILTER by born_date range
+    if (bornDateFrom || bornDateTo) {
+      where.born_date = {};
+      if (bornDateFrom) {
+        where.born_date.gte = bornDateFrom; // "YYYY-MM-DD" string
+      }
+      if (bornDateTo) {
+        where.born_date.lte = bornDateTo;
+      }
+    }
+
+    // FILTER by death_date range
+    if (deathDateFrom || deathDateTo) {
+      where.death_date = {};
+      if (deathDateFrom) {
+        where.death_date.gte = deathDateFrom; // "YYYY-MM-DD" string
+      }
+      if (deathDateTo) {
+        where.death_date.lte = deathDateTo;
+      }
+    }
+
+    // Fetch data with pagination and filters
+    const [profiles, total] = await this.prisma.$transaction([
+      this.prisma.deadPersonProfile.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.deadPersonProfile.count({ where }),
+    ]);
+
+    return {
+      message: 'Profiles fetched successfully',
+      data: profiles,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+      status: HttpStatus.OK,
+    };
+  }
+
+
+
+  // dead-person-profile.service.ts
+  async getMemoryProfileById(id: string) {
+    const profile = await this.prisma.deadPersonProfile.findUnique({
+      where: { slug: id },
+      include: {
+        biography: true,
+        SocialLinks: true,
+        family: true,
+        Events: true,
+        gallery: true,
+        guestBook: true
+      }
+    });
+
+    if (!profile) {
+      throw new NotFoundException(`Profile with ID ${id} not found`);
+    }
+
+    return {
+      message: 'Profile fetched successfully',
+      data: profile,
+      status: HttpStatus.OK,
+    };
+  }
+
+
 }
