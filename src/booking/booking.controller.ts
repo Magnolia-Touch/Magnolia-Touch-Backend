@@ -5,6 +5,8 @@ import { BookingService } from "./booking.service";
 import { BookingQueryDto } from "./dto/booking-query.dto";
 import { UpdateBookingstatusDto } from "./dto/update-booking.dto";
 import { CheckoutSessionLinkDto, BookingWithCheckoutDto, CreateBookingResponseDto } from "./dto/checkout-session-response.dto";
+import { RolesGuard } from "src/common/decoraters/roles.guard";
+import { Roles } from "src/common/decoraters/roles.decorator";
 
 
 @Controller('booking')
@@ -14,16 +16,16 @@ export class BookingController {
     @UseGuards(JwtAuthGuard)
     @Post("book-cleaning-service")
     async createbooking(
-        @Req() req,
+        @Request() req,
         @Body() body: CreateBookingDto & { successUrl?: string; cancelUrl?: string },
     ): Promise<CreateBookingResponseDto> {
         const userId = req.user.customer_id;
         const userEmail = req.user.email;
         const { successUrl, cancelUrl, ...bookingData } = body;
-        
+
         return this.bookingService.createBooking(
             bookingData,
-            userId, 
+            userId,
             userEmail,
             successUrl,
             cancelUrl
@@ -39,7 +41,7 @@ export class BookingController {
     ): Promise<CheckoutSessionLinkDto[]> {
         const userId = req.user.customer_id;
         const userEmail = req.user.email;
-        
+
         return this.bookingService.getUserCheckoutLinks(
             userId,
             userEmail,
@@ -58,7 +60,7 @@ export class BookingController {
     ): Promise<BookingWithCheckoutDto | { message: string }> {
         const userId = req.user.customer_id;
         const userEmail = req.user.email;
-        
+
         const bookingWithCheckout = await this.bookingService.getBookingWithCheckoutLink(
             bookingId,
             userId,
@@ -78,4 +80,63 @@ export class BookingController {
     updateStatus(@Param('id') id: string, @Body() updatecleaningstatus: UpdateBookingstatusDto) {
         return this.bookingService.updateStaus(+id, updatecleaningstatus)
     }
+
+    @UseGuards(JwtAuthGuard)
+    @Get('my-bookings')
+    async getMyBookings(
+        @Request() req,
+        @Query('page') page?: string,
+        @Query('limit') limit?: string,
+    ) {
+        // Safe defaults
+        const pageNum = parseInt(page || '1', 10);
+        const limitNum = parseInt(limit || '10', 10);
+
+        // Only fetch this user's bookings
+        return this.bookingService.getUserBookingStatus(req.user.customer_id, pageNum, limitNum);
+    }
+
+    // USER: Get single booking status by booking id
+    @UseGuards(JwtAuthGuard)
+    @Get('my-bookings/:bookingId')
+    async getBookingStatus(@Param('bookingId') bookingId: string, @Req() req) {
+        return this.bookingService.getBookingStatusByBookingId(req.user.customer_id, bookingId);
+    }
+
+    // ADMIN: Update booking status
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles('ADMIN')
+    @Patch(':bookingId')
+    async updateBookingStatus(
+        @Param('bookingId') bookingId: string,
+        @Body() dto: UpdateBookingstatusDto,
+    ) {
+        return this.bookingService.updateBookingStatus(bookingId, dto);
+    }
+
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles('ADMIN')
+    @Get('all-bookings')
+    async getBookingsByAdmin(
+        @Request() req,
+        @Query('page') page?: string,
+        @Query('limit') limit?: string,
+    ) {
+        // Safe defaults
+        const pageNum = parseInt(page || '1', 10);
+        const limitNum = parseInt(limit || '10', 10);
+
+        // Only fetch this user's bookings
+        return this.bookingService.getUserBookingStatusByAdmin(pageNum, limitNum);
+    }
+
+    // Admin: Get single booking status by booking id
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles('ADMIN')
+    @Get('all-bookings/:bookingId')
+    async getBookingStatusbyAdmin(@Param('bookingId') bookingId: string, @Req() req) {
+        return this.bookingService.getBookingStatusByBookingIdByAdmin(req.user.customer_id, bookingId);
+    }
 }
+
+

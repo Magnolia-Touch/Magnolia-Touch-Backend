@@ -36,9 +36,11 @@ enum SocialNames {
 }
 
 enum CleaningStatus {
-  pending
-  confirmed
-  cleaned
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  
 }
 
 
@@ -211,7 +213,7 @@ model Booking {
   Flower_id                Int?
   booking_date             DateTime
   anniversary_date         DateTime?
-  status                   CleaningStatus @default(pending)
+  status                   CleaningStatus @default(PENDING)
   is_bought                Boolean        @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
