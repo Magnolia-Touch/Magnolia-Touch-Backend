@@ -7,6 +7,7 @@ import { CreateGuestBookDto } from './dto/create-guestbook.dto';
 import { generateCode } from 'src/utils/code-generator.util'; // adjust path if needed
 import { HttpStatus } from '@nestjs/common';
 import { CreateProfileDto } from './dto/create-profile.dto';
+import { contains } from 'class-validator';
 
 @Injectable()
 export class MemorialProfileService {
@@ -100,7 +101,9 @@ export class MemorialProfileService {
         biography: true,
         family: true,
         gallery: true,
-        guestBook: true
+        guestBook: true,
+        Events: true,
+        SocialLinks: true
       },
     });
 
@@ -847,4 +850,109 @@ export class MemorialProfileService {
       status: HttpStatus.CREATED,
     };
   }
+
+  async getAllMemoryProfile(query: any) {
+    // pagination
+    const page = parseInt(query.page, 10) || 1;
+    const limit = parseInt(query.limit, 10) || 10;
+    const skip = (page - 1) * limit;
+
+    // search term
+    const search = query.search || '';
+
+    // born_date filter (exact or range)
+    const bornDateFrom = query.bornDateFrom;
+    const bornDateTo = query.bornDateTo;
+
+    // death_date filter (exact or range)
+    const deathDateFrom = query.deathDateFrom;
+    const deathDateTo = query.deathDateTo;
+
+    // Build where clause dynamically
+    const where: any = {};
+
+    // SEARCH across firstName, lastName, description, slug
+    if (search) {
+      where.OR = [
+        { firstName: { contains: search, mode: 'insensitive' } },
+        { lastName: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+        { slug: { contains: search.toLowerCase() } },
+      ];
+    }
+
+    // FILTER by born_date range
+    if (bornDateFrom || bornDateTo) {
+      where.born_date = {};
+      if (bornDateFrom) {
+        where.born_date.gte = bornDateFrom; // "YYYY-MM-DD" string
+      }
+      if (bornDateTo) {
+        where.born_date.lte = bornDateTo;
+      }
+    }
+
+    // FILTER by death_date range
+    if (deathDateFrom || deathDateTo) {
+      where.death_date = {};
+      if (deathDateFrom) {
+        where.death_date.gte = deathDateFrom; // "YYYY-MM-DD" string
+      }
+      if (deathDateTo) {
+        where.death_date.lte = deathDateTo;
+      }
+    }
+
+    // Fetch data with pagination and filters
+    const [profiles, total] = await this.prisma.$transaction([
+      this.prisma.deadPersonProfile.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.deadPersonProfile.count({ where }),
+    ]);
+
+    return {
+      message: 'Profiles fetched successfully',
+      data: profiles,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+      status: HttpStatus.OK,
+    };
+  }
+
+
+
+  // dead-person-profile.service.ts
+  async getMemoryProfileById(id: string) {
+    const profile = await this.prisma.deadPersonProfile.findUnique({
+      where: { slug: id },
+      include: {
+        biography: true,
+        SocialLinks: true,
+        family: true,
+        Events: true,
+        gallery: true,
+        guestBook: true
+      }
+    });
+
+    if (!profile) {
+      throw new NotFoundException(`Profile with ID ${id} not found`);
+    }
+
+    return {
+      message: 'Profile fetched successfully',
+      data: profile,
+      status: HttpStatus.OK,
+    };
+  }
+
+
 }

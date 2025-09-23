@@ -1,5 +1,5 @@
 
-import { Controller, Post, Body, Query, Get, Patch, Request, Param, ParseIntPipe, Delete, UseInterceptors, UploadedFile, UploadedFiles } from '@nestjs/common';
+import { Controller, Post, Body, Query, Get, Patch, Request, Param, ParseIntPipe, Delete, UseInterceptors, UploadedFile, UploadedFiles, HttpException, HttpStatus, NotFoundException } from '@nestjs/common';
 import { MemorialProfileService } from './memorial.service';
 import { CreateDeadPersonProfileDto } from './dto/memorial_profile.dto';
 import { CreateFamilyMemberDto } from './dto/create-family.dto';
@@ -199,5 +199,40 @@ export class MemorialController {
     return this.deadPersonProfileService.uploadMultipleMedia(email, slug, mediatype, media);
   }
 
+  @Get('profiles')
+  async getAllMemoryProfile(@Query() query: any) {
+    try {
+      return await this.deadPersonProfileService.getAllMemoryProfile(query);
+    } catch (error) {
+      throw new HttpException(
+        {
+          message: 'Failed to fetch profiles',
+          error: error.message,
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+
+
+  @Get('profiles/:id') // <-- GET by ID
+  async getMemoryProfileById(@Param('id') id: string) {
+    try {
+      return await this.deadPersonProfileService.getMemoryProfileById(id);
+    } catch (error) {
+      // Pass through NotFoundException or throw generic error
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new HttpException(
+        {
+          message: `Failed to fetch profile with ID ${id}`,
+          error: error.message,
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
 }
 

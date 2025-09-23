@@ -49,6 +49,8 @@ model User {
   Phone         String
   password      String
   role          Role   @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   Orders               Orders[]
   Church               Church[]
@@ -70,6 +72,8 @@ model UserAddress {
   postcode        String
   phone           String
   email           String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   User            User?    @relation(fields: [userCustomer_id], references: [customer_id])
   userCustomer_id Int?
@@ -87,6 +91,8 @@ model BillingAddress {
   email           String
   User            User?    @relation(fields: [userCustomer_id], references: [customer_id])
   userCustomer_id Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   Orders          Orders[]
 }
 
@@ -98,6 +104,8 @@ model Products {
   short_Description    String             @db.Text
   detailed_description String?            @db.Text
   company_guarantee    String?            @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   Dimensions           ProductDimension[]
   CartItem             CartItem[]
 }
@@ -108,7 +116,10 @@ model Services {
   name        String
   discription String
   features    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
+
 
 model Cart {
   cartId       Int        @id @default(autoincrement())
@@ -117,6 +128,7 @@ model Cart {
   total_amount String
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
+
 
   user User @relation(fields: [userId], references: [customer_id])
 }
@@ -127,6 +139,8 @@ model CartItem {
   productId Int
   quantity  Int
   price     Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   cart    Cart     @relation(fields: [cartId], references: [cartId])
   product Products @relation(fields: [productId], references: [product_id])
@@ -137,6 +151,8 @@ model ProductDimension {
   dimension          String
   Products           Products? @relation(fields: [productsProduct_id], references: [product_id])
   productsProduct_id Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model SubscriptionPlan {
@@ -145,18 +161,21 @@ model SubscriptionPlan {
   Subscription_name String
   Frequency         Int
   Price             String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   bookings Booking[]
 }
 
 model Flowers {
   flower_id Int @id @default(autoincrement())
-
-  image       String
+  image       String?
   Name        String
   Price       String
   Description String?
   in_stock    Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   bookings Booking[]
 }
@@ -169,6 +188,9 @@ model Church {
   church_address  String?
   User            User?     @relation(fields: [userCustomer_id], references: [customer_id])
   userCustomer_id Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   Booking         Booking[]
   Orders          Orders[]
 }
@@ -190,6 +212,8 @@ model Booking {
   anniversary_date         DateTime?
   status                   CleaningStatus @default(pending)
   is_bought                Boolean        @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   user         User             @relation(fields: [User_id], references: [customer_id])
   Church       Church           @relation(fields: [church_id], references: [church_id])
@@ -202,6 +226,8 @@ model Reviews {
   User_Id            Int
   Review_Description String
   Rating             Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   user User @relation(fields: [User_Id], references: [customer_id])
 }
@@ -218,6 +244,8 @@ model DeadPersonProfile {
   memorial_place   String?
   is_paid          Boolean @default(false)
   slug             String  @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   biography   Biography[]
   gallery     Gallery[]
@@ -236,6 +264,7 @@ model SocialLinks {
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
 
+
   deadPersonProfiles String
   profile            DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
 }
@@ -247,6 +276,7 @@ model Events {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+
   deadPersonProfiles String
   profile            DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
 }
@@ -254,6 +284,8 @@ model Events {
 model Biography {
   biography_id Int    @id @default(autoincrement())
   discription  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   deadPersonProfiles String
   profile            DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
@@ -262,6 +294,8 @@ model Biography {
 model Gallery {
   gallery_id Int     @id @default(autoincrement())
   link       String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   deadPersonProfiles String
   profile            DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
@@ -271,6 +305,8 @@ model Family {
   family_id    Int           @id @default(autoincrement())
   relationship String
   name         String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   deadPersonProfiles String
   profile            DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
@@ -280,6 +316,8 @@ model GuestBook {
   guestbook_id       Int              @id @default(autoincrement())
   guestBookItems     GuestBookItems[]
   deadPersonProfiles String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   profile DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
 }
@@ -295,6 +333,8 @@ model GuestBookItems {
   photo_upload      String?
   date              String
   is_approved       Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   profile GuestBook @relation(fields: [guestbook_id], references: [guestbook_id])
 }
@@ -333,6 +373,8 @@ model Orders {
 model DeliveryAgentProfile {
   id               Int      @id @default(autoincrement())
   deliveryagent_id Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   orders           Orders[]
 
   User User? @relation(fields: [deliveryagent_id], references: [customer_id])
