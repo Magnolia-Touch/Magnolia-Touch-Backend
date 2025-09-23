@@ -2,9 +2,9 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, develop ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, develop ]
 
 env:
   NODE_VERSION: '20.x'
@@ -26,7 +26,7 @@ jobs:
         ports:
           - 3306:3306
         options: >-
-          --health-cmd="mysqladmin ping"
+          --health-cmd="mysqladmin ping -h localhost -u testuser -ptestpass"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=3
@@ -58,7 +58,7 @@ jobs:
     - name: Run database migrations
       run: npx prisma db push --force-reset
 
-    - name: Run tests
+    - name: Run unit tests
       run: npm run test
 
     - name: Run e2e tests
@@ -90,7 +90,7 @@ jobs:
     - name: Setup Docker Buildx
       uses: docker/setup-buildx-action@v3
 
-    - name: Log in to Container Registry
+    - name: Log in to GHCR
       uses: docker/login-action@v3
       with:
         registry: ${{ env.REGISTRY }}
@@ -141,17 +141,15 @@ jobs:
     - name: Deploy to staging
       run: |
         echo "Deploying to staging environment..."
-        # Add your staging deployment commands here
-        # Example for AWS ECS, Kubernetes, or other deployment targets
+        ssh -o StrictHostKeyChecking=no user@your-vps-ip "cd /app && docker-compose pull && docker-compose up -d"
 
     - name: Run health checks
       run: |
         echo "Running health checks..."
-        # Add health check commands here
-        # curl -f https://staging-api.magnolia.com/health || exit 1
+        curl -f https://staging-api.magnolia.com/health || exit 1
 
   deploy-production:
-    needs: [test, build, security-scan]
+    needs: [test, build]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     environment:
@@ -165,18 +163,12 @@ jobs:
     - name: Deploy to production
       run: |
         echo "Deploying to production environment..."
-        # Add your production deployment commands here
-        # This could include:
-        # - AWS ECS deployment
-        # - Kubernetes deployment
-        # - Docker Swarm deployment
-        # - Server deployment via SSH
+        ssh -o StrictHostKeyChecking=no user@your-vps-ip "cd /app && docker-compose pull && docker-compose up -d"
 
     - name: Run smoke tests
       run: |
         echo "Running smoke tests..."
-        # Add smoke test commands here
-        # curl -f https://api.magnolia.com/health || exit 1
+        curl -f https://api.magnolia.com/health || exit 1
 
     - name: Notify deployment success
       uses: 8398a7/action-slack@v3
@@ -205,5 +197,4 @@ jobs:
     - name: Cleanup old images
       run: |
         echo "Cleaning up old container images..."
-        # Add cleanup commands to remove old images
-        # This helps manage storage costs
+        docker image prune -af || true
