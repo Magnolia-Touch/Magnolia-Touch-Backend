@@ -6,6 +6,7 @@ import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/common/decoraters/roles.guard';
 import { Roles } from 'src/common/decoraters/roles.decorator';
+import { OrderStatus } from '@prisma/client';
 
 @Controller('orders')
 export class OrdersController {
@@ -25,10 +26,8 @@ export class OrdersController {
   ) {
     const pageNum = parseInt(page || '1', 10);
     const limitNum = parseInt(limit || '10', 10);
-
     return this.ordersService.findAll(req.user.id, pageNum, limitNum);
   }
-
 
   @UseGuards(JwtAuthGuard)
   @Get('my-orders/:id')
@@ -70,6 +69,30 @@ export class OrdersController {
   @Get('all-orders/:id')
   async getMyOrderByIdByAdmin(@Req() req, @Param('id') id: string) {
     return this.ordersService.findOneByAdmin(parseInt(id, 10));
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @Get('memorial-orders')
+  async getUserOrdersByAdmin(
+    @Req() req,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('status') status?: OrderStatus,
+    @Query('createdDate') createdDate?: string,
+    @Query('orderNumber') orderNumber?: string, // ✅ added
+  ) {
+    const pageNum = parseInt(page || '1', 10);
+    const limitNum = parseInt(limit || '10', 10);
+
+    return this.ordersService.findUserOrdersByAdmin(
+      req.user.id,
+      pageNum,
+      limitNum,
+      status as OrderStatus,
+      createdDate,
+      orderNumber,
+    );
   }
 
 }

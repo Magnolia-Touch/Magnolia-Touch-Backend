@@ -40,7 +40,6 @@ enum CleaningStatus {
   IN_PROGRESS
   COMPLETED
   CANCELLED
-  
 }
 
 

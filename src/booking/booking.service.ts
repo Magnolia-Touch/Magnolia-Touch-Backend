@@ -6,6 +6,7 @@ import { generateOrderIdforService } from "src/utils/code-generator.util";
 import { ChurchService } from "src/church/church.service";
 import { UpdateBookingstatusDto } from "./dto/update-booking.dto";
 import { CheckoutSessionLinkDto, BookingWithCheckoutDto, CreateBookingResponseDto } from "./dto/checkout-session-response.dto";
+import { CleaningStatus } from '@prisma/client'; // adjust import path if needed
 
 @Injectable()
 export class BookingService {
@@ -334,7 +335,6 @@ export class BookingService {
       }),
       this.prisma.booking.count(),
     ]);
-
     if (!bookings || bookings.length === 0) {
       throw new NotFoundException('No bookings found for this user');
     }
@@ -370,6 +370,77 @@ export class BookingService {
       status: HttpStatus.OK,
     };
   }
+
+  async findServiceBookings(
+    page = 1,
+    limit = 10,
+    cleaningStatus?: CleaningStatus,
+    firstCleaningDate?: string,
+    createdDate?: string,
+  ) {
+    const skip = (page - 1) * limit;
+
+    // Build dynamic where clause
+    const where: any = {};
+
+    // Filter by Cleaning Status
+    if (cleaningStatus) {
+      where.status = cleaningStatus;
+    }
+
+    // Filter by first_cleaning_date (exact day)
+    if (firstCleaningDate) {
+      // Convert to Date
+      const date = new Date(firstCleaningDate);
+      const nextDay = new Date(date);
+      nextDay.setDate(date.getDate() + 1);
+
+      where.first_cleaning_date = {
+        gte: date,
+        lt: nextDay, // ensures same day range
+      };
+    }
+
+    // Filter by createdAt (exact day)
+    if (createdDate) {
+      const date = new Date(createdDate);
+      const nextDay = new Date(date);
+      nextDay.setDate(date.getDate() + 1);
+
+      where.createdAt = {
+        gte: date,
+        lt: nextDay,
+      };
+    }
+
+    const [bookings, total] = await this.prisma.$transaction([
+      this.prisma.booking.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.booking.count({ where }),
+    ]);
+
+    return {
+      message: 'Service bookings fetched successfully',
+      data: bookings,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+      status: HttpStatus.OK,
+    };
+  }
+
+
+
+
+
+
 
   // ##need to connect stripe webhook to confirm payment and thereafter booking
 }
