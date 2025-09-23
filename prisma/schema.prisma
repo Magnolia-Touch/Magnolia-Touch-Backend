@@ -173,6 +173,7 @@ model Flowers {
   Name        String
   Price       String
   Description String?
+  stock_count Int @default(0)
   in_stock    Boolean @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
