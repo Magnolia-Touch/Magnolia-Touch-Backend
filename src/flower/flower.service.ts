@@ -36,6 +36,7 @@ export class FlowersService {
         Name: dto.Name,
         Description: dto.Description,
         Price: dto.Price,
+        stock_count: dto.stock_count,
         in_stock: dto.in_stock,
       },
     });
@@ -57,7 +58,24 @@ export class FlowersService {
     };
   }
 
-  async updateStock(flower_id: number, is_stock: boolean) {
+  async getFlowerById(flower_id: number) {
+    const flower = await this.prisma.flowers.findUnique({
+      where: { flower_id },
+    });
+
+    if (!flower) {
+      throw new NotFoundException(`Flower with ID ${flower_id} not found`);
+    }
+
+    return {
+      message: 'Flower fetched successfully',
+      data: flower,
+      status: HttpStatus.OK,
+    };
+  }
+
+
+  async updateStock(flower_id: number, is_stock: boolean, stock_count: number) {
     const flower = await this.prisma.flowers.findUnique({ where: { flower_id } })
     if (!flower) {
       throw new NotFoundException('Flower not found');
@@ -65,7 +83,10 @@ export class FlowersService {
 
     await this.prisma.flowers.update({
       where: { flower_id },
-      data: { in_stock: is_stock }
+      data: {
+        in_stock: is_stock,
+        stock_count: stock_count
+      }
     })
     return {
       message: 'Flower stock updated successfully',
@@ -116,6 +137,7 @@ export class FlowersService {
         Name: dto.Name ?? flower.Name,
         Description: dto.Description ?? flower.Description,
         Price: dto.Price ?? flower.Price,
+        stock_count: dto.stock_count ?? flower.stock_count,
         in_stock: dto.in_stock ?? flower.in_stock,
       },
     });

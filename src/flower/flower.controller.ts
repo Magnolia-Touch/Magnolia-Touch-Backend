@@ -31,11 +31,17 @@ export class FlowersController {
     return this.flowersService.getAllFlowers();
   }
 
+  @Get(':id')
+  async getFlowerById(@Param('id', ParseIntPipe) id: number) {
+    return this.flowersService.getFlowerById(id);
+  }
+
+
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
   @Patch('update-flower-stock')
-  updateStock(@Query('id', ParseIntPipe) flower_id: number, @Body('in_stock') is_stock: boolean) {
-    return this.flowersService.updateStock(flower_id, is_stock);
+  updateStock(@Query('id', ParseIntPipe) flower_id: number, @Body('in_stock') is_stock: boolean, @Body('stock_count', ParseIntPipe) stock_count: number) {
+    return this.flowersService.updateStock(flower_id, is_stock, stock_count);
   }
 
   @Put(':id')
