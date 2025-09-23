@@ -138,4 +138,68 @@ export class OrdersService {
     }
     return order;
   }
+
+  async findUserOrdersByAdmin(
+    userId: number,
+    page = 1,
+    limit = 10,
+    status?: OrderStatus,
+    createdDate?: string,
+    orderNumber?: string, // ✅ added
+  ) {
+    const skip = (page - 1) * limit;
+
+    // Build dynamic where clause
+    const where: any = { User_id: userId };
+
+    if (status) {
+      where.status = status;
+    }
+
+    if (createdDate) {
+      const date = new Date(createdDate);
+      const nextDay = new Date(date);
+      nextDay.setDate(date.getDate() + 1);
+
+      where.createdAt = {
+        gte: date,
+        lt: nextDay,
+      };
+    }
+
+    if (orderNumber) {
+      // For exact match:
+      where.orderNumber = orderNumber;
+
+      // For partial match (optional):
+      // where.orderNumber = { contains: orderNumber, mode: 'insensitive' };
+    }
+
+    const [orders, total] = await this.prisma.$transaction([
+      this.prisma.orders.findMany({
+        where,
+        orderBy: { createdAt: 'desc' }, // latest first
+        skip,
+        take: limit,
+      }),
+      this.prisma.orders.count({ where }),
+    ]);
+
+    if (!orders || orders.length === 0) {
+      throw new NotFoundException('No orders found for this user');
+    }
+
+    return {
+      message: 'Orders fetched successfully',
+      data: orders,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+      status: HttpStatus.OK,
+    };
+  }
+
 }

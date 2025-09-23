@@ -7,7 +7,7 @@ import { UpdateBookingstatusDto } from "./dto/update-booking.dto";
 import { CheckoutSessionLinkDto, BookingWithCheckoutDto, CreateBookingResponseDto } from "./dto/checkout-session-response.dto";
 import { RolesGuard } from "src/common/decoraters/roles.guard";
 import { Roles } from "src/common/decoraters/roles.decorator";
-
+import { CleaningStatus } from '@prisma/client'; // adjust import path if needed
 
 @Controller('booking')
 export class BookingController {
@@ -137,6 +137,29 @@ export class BookingController {
     async getBookingStatusbyAdmin(@Param('bookingId') bookingId: string, @Req() req) {
         return this.bookingService.getBookingStatusByBookingIdByAdmin(req.user.customer_id, bookingId);
     }
+
+    @UseGuards(JwtAuthGuard, RolesGuard) // if only logged-in users can access
+    @Roles('ADMIN')
+    @Get('service-bookings')
+    async getServiceBookings(
+        @Query('page') page?: string,
+        @Query('limit') limit?: string,
+        @Query('cleaningStatus') cleaningStatus?: CleaningStatus,
+        @Query('firstCleaningDate') firstCleaningDate?: string,
+        @Query('createdDate') createdDate?: string,
+    ) {
+        const pageNum = parseInt(page || '1', 10);
+        const limitNum = parseInt(limit || '10', 10);
+
+        return this.bookingService.findServiceBookings(
+            pageNum,
+            limitNum,
+            cleaningStatus as CleaningStatus,
+            firstCleaningDate,
+            createdDate,
+        );
+    }
+
 }
 
 
