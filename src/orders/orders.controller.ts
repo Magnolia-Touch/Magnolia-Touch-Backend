@@ -63,7 +63,6 @@ export class OrdersController {
     return this.ordersService.findAllByAdmin(pageNum, limitNum);
   }
 
-
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
   @Get('all-orders/:id')

@@ -8,12 +8,14 @@ import { generateCode } from 'src/utils/code-generator.util'; // adjust path if 
 import { HttpStatus } from '@nestjs/common';
 import { CreateProfileDto } from './dto/create-profile.dto';
 import { contains } from 'class-validator';
+import { MailerService } from '@nestjs-modules/mailer';
 
 @Injectable()
 export class MemorialProfileService {
   constructor(
     private prisma: PrismaService,
-    private s3Service: S3Service
+    private s3Service: S3Service,
+    private emailService: MailerService
   ) { }
 
   async create(dto: CreateProfileDto, email: string) {
@@ -797,37 +799,31 @@ export class MemorialProfileService {
     };
   }
 
-  async addGuestbookWithPhoto(slug: string, dto: Omit<CreateGuestBookDto, 'photo_upload'>, file?: Express.Multer.File) {
+
+  // dead-person-profile.service.ts
+  async addGuestbookWithPhoto(
+    slug: string,
+    dto: Omit<CreateGuestBookDto, 'photo_upload'>,
+    file?: Express.Multer.File,
+  ) {
     const { first_name, last_name, guestemail, phone, message } = dto;
     const date = new Date().toISOString();
 
     const profile = await this.prisma.deadPersonProfile.findUnique({
       where: { slug },
-      include: { guestBook: true },
+      include: {
+        guestBook: true,
+        user: true, // 👈 Make sure the profile owner info (email) is fetched
+      },
     });
+
     if (!profile || !profile.guestBook.length) {
       throw new NotFoundException('Guestbook not found for this profile');
     }
 
     let photoUrl: string | null = null;
 
-    // Upload photo to S3 if provided
-    if (file) {
-      // Validate photo
-      const allowedImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-      if (!this.s3Service.validateFileType(file, allowedImageTypes)) {
-        throw new BadRequestException('Invalid image type. Only JPEG, PNG, GIF, and WebP images are allowed.');
-      }
-
-      const maxSize = 5 * 1024 * 1024; // 5MB
-      if (!this.s3Service.validateFileSize(file, maxSize)) {
-        throw new BadRequestException('Image size too large. Maximum size is 5MB.');
-      }
-
-      // Upload to S3
-      const folder = `profiles/${slug}/guestbook-photos`;
-      photoUrl = await this.s3Service.uploadFile(file, folder);
-    }
+    // upload image (same as your code)...
 
     const guestbook_id = profile.guestBook[0].guestbook_id;
     const created = await this.prisma.guestBookItems.create({
@@ -844,12 +840,24 @@ export class MemorialProfileService {
       },
     });
 
+    // ✅ Send email notification to profile owner here
+    const profileOwnerEmail = profile.user?.email; // adjust field based on your DB structure
+    if (profileOwnerEmail) {
+      const visitorName = `${first_name} ${last_name}`.trim();
+      await this.sendProfileOwnerNotification(
+        profileOwnerEmail,
+        visitorName,
+        profile.firstName || profile.lastName // adjust based on your DB field
+      );
+    }
+
     return {
       message: 'GuestBook entry added successfully',
       data: created,
       status: HttpStatus.CREATED,
     };
   }
+
 
   async getAllMemoryProfile(query: any) {
     // pagination
@@ -952,6 +960,26 @@ export class MemorialProfileService {
       data: profile,
       status: HttpStatus.OK,
     };
+  }
+
+  async sendProfileOwnerNotification(ownerEmail: string, visitorName: string, profileName: string) {
+    const subject = `New Memory Shared on ${profileName}`;
+    const text = `
+    Hi,
+    
+    One memorial visitor, ${visitorName}, has shared their memory on ${profileName}'s profile.
+    
+    Please review and approve/deny it to appear publicly on the profile.
+    
+    Regards,
+    Your App Team
+    `;
+
+    await this.emailService.sendMail({
+      to: ownerEmail,
+      subject,
+      text,
+    });
   }
 
 

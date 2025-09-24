@@ -145,8 +145,7 @@ export class BookingController {
         @Query('page') page?: string,
         @Query('limit') limit?: string,
         @Query('cleaningStatus') cleaningStatus?: CleaningStatus,
-        @Query('firstCleaningDate') firstCleaningDate?: string,
-        @Query('createdDate') createdDate?: string,
+        @Query('dateQuery') dateQuery?: string // 🟢 single date parameter
     ) {
         const pageNum = parseInt(page || '1', 10);
         const limitNum = parseInt(limit || '10', 10);
@@ -155,10 +154,10 @@ export class BookingController {
             pageNum,
             limitNum,
             cleaningStatus as CleaningStatus,
-            firstCleaningDate,
-            createdDate,
+            dateQuery // 🟢 pass single date parameter
         );
     }
+
 
 }
 

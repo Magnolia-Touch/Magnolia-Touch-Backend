@@ -43,17 +43,8 @@ export function generateOrderIdforProduct(): string {
   return `MAGNOLIAPRODUCT${timestamp}`;
 }
 
+import { randomUUID } from 'crypto';
+
 export function generateOrderIdforService(): string {
-  const now = new Date();
-  const pad = (n: number, width: number) => {
-    return n.toString().padStart(width, '0');
-  };
-  const year = now.getFullYear();
-  const month = pad(now.getMonth() + 1, 2);
-  const day = pad(now.getDate(), 2);
-  const hour = pad(now.getHours(), 2);
-  const minute = pad(now.getMinutes(), 2);
-  const second = pad(now.getSeconds(), 2);
-  const timestamp = `${year}${month}${day}${hour}${minute}${second}`;
-  return `MAGNOLIASERVICE${timestamp}`;
+  return `MAGNOLIASERVICE-${Date.now()}-${randomUUID()}`;
 }

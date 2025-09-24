@@ -39,80 +39,135 @@ export class BookingService {
     successUrl?: string,
     cancelUrl?: string
   ): Promise<CreateBookingResponseDto> {
-    const { name_on_memorial, plot_no, first_cleaning_date, second_cleaning_date, anniversary_date, no_of_subsribe_years, church_name, city, state, subscription_id, flower_id } = bookingdto;
+    const {
+      name_on_memorial,
+      plot_no,
+      first_cleaning_date,
+      second_cleaning_date,
+      anniversary_date,
+      no_of_subsribe_years,
+      church_name,
+      city,
+      state,
+      subscription_id,
+      flower_id,
+    } = bookingdto;
 
+    // Dates
     const first_date = new Date(first_cleaning_date);
     const second_date = second_cleaning_date ? new Date(second_cleaning_date) : null;
     const death_anniversary_date = anniversary_date ? new Date(anniversary_date) : null;
 
+    // Church creation
     const church = await this.prisma.church.create({
       data: {
         church_name: church_name,
         city: city,
-        state: state
-      }
-    })
+        state: state,
+      },
+    });
 
+    // Subscription validation
     const subscribed_plan = await this.prisma.subscriptionPlan.findUnique({
       where: { Subscription_id: subscription_id },
     });
-    if (!subscribed_plan) {
-      throw new Error('Subscription plan not found');
+    if (!subscribed_plan) throw new Error('Subscription plan not found');
+    if (no_of_subsribe_years) {
+      if (!subscribed_plan.isSubscriptionPlan && no_of_subsribe_years > 1) {
+        throw new Error('Please choose subscription for clean yearly');
+      }
+    }
+    if (subscribed_plan?.Frequency !== 2 && second_cleaning_date) {
+      throw new Error('Select suitable plan to clean for twice yearly');
     }
 
+    // Flower
     const flower = flower_id
       ? await this.prisma.flowers.findUnique({ where: { flower_id } })
       : null;
 
-    const amount = parseInt(subscribed_plan.Price, 10)
-    const booking = await this.prisma.booking.create({
-      data: {
-        booking_ids: generateOrderIdforService(),
-        User_id: user_Id,
-        church_id: church.church_id,
-        name_on_memorial,
-        plot_no,
-        Subscription_id: subscription_id,
-        amount: amount,
-        first_cleaning_date: first_date,
-        second_cleaning_date: second_date,
-        Flower_id: flower_id ?? null,
-        booking_date: new Date(),
-        anniversary_date: death_anniversary_date,
-        no_of_subscription_years: no_of_subsribe_years ?? 0,
-        status: 'PENDING',
-        is_bought: false,
-      },
-    });
+    const amount = parseInt(subscribed_plan.Price, 10);
 
-    // Create checkout session instead of payment intent
-    const checkoutSession = await this.stipeservice.createCheckoutLinkForExistingBooking(
-      booking,
-      user_email,
-      successUrl || this.getDefaultUrl('/booking/success'),
-      cancelUrl || this.getDefaultUrl('/booking/cancel')
-    );
+    // Helper to increment year but keep month/day constant
+    function addYearsKeepMonthDay(baseDate: Date, yearsToAdd: number): Date {
+      const y = baseDate.getFullYear() + yearsToAdd;
+      const m = baseDate.getMonth();
+      const d = baseDate.getDate();
+      return new Date(y, m, d);
+    }
 
-    const bookingWithCheckout: BookingWithCheckoutDto = {
-      id: booking.id,
-      booking_ids: booking.booking_ids,
-      name_on_memorial: booking.name_on_memorial,
-      plot_no: booking.plot_no,
-      amount: booking.amount,
-      status: booking.status,
-      is_bought: booking.is_bought,
-      checkout_url: checkoutSession.url!,
-      session_id: checkoutSession.id,
-      payment_status: checkoutSession.payment_status || 'pending',
-      expires_at: checkoutSession.expires_at ? new Date(checkoutSession.expires_at * 1000).toISOString() : undefined,
-    };
+    // --- 🟢 Create bookings in loop ---
+    const totalYears = no_of_subsribe_years ?? 1;
 
+    let firstBookingCreated: any;
+
+    for (let i = 0; i < totalYears; i++) {
+      const newFirstDate = addYearsKeepMonthDay(first_date, i);
+
+      const newSecondDate = second_date
+        ? addYearsKeepMonthDay(second_date, i)
+        : null;
+
+      const newAnniversaryDate = death_anniversary_date
+        ? addYearsKeepMonthDay(death_anniversary_date, i)
+        : null;
+
+      const booking = await this.prisma.booking.create({
+        data: {
+          booking_ids: `${generateOrderIdforService()}-${i + 1}`, // guarantee uniqueness
+          User_id: user_Id,
+          church_id: church.church_id,
+          name_on_memorial,
+          plot_no,
+          Subscription_id: subscription_id,
+          amount: amount,
+          first_cleaning_date: newFirstDate,
+          second_cleaning_date: newSecondDate,
+          Flower_id: flower_id ?? null,
+          booking_date: new Date(),
+          anniversary_date: newAnniversaryDate,
+          no_of_subscription_years: totalYears,
+          status: 'PENDING',
+          is_bought: false,
+        },
+      });
+
+      // Only first booking gets checkout link + returned response
+      if (i === 0) {
+        const checkoutSession = await this.stipeservice.createCheckoutLinkForExistingBooking(
+          booking,
+          user_email,
+          successUrl || this.getDefaultUrl('/booking/success'),
+          cancelUrl || this.getDefaultUrl('/booking/cancel')
+        );
+
+        firstBookingCreated = {
+          id: booking.id,
+          booking_ids: booking.booking_ids,
+          name_on_memorial: booking.name_on_memorial,
+          plot_no: booking.plot_no,
+          amount: booking.amount,
+          status: booking.status,
+          is_bought: booking.is_bought,
+          checkout_url: checkoutSession.url!,
+          session_id: checkoutSession.id,
+          payment_status: checkoutSession.payment_status || 'pending',
+          expires_at: checkoutSession.expires_at
+            ? new Date(checkoutSession.expires_at * 1000).toISOString()
+            : undefined,
+        };
+      }
+    }
+
+    // Return response only for the first booking
     return {
-      message: 'Booking created successfully with checkout link',
-      booking: bookingWithCheckout,
+      message: `Booking created successfully with checkout link (Created ${totalYears} bookings internally)`,
+      booking: firstBookingCreated,
       status: HttpStatus.OK,
     };
   }
+
+
 
   async updateStaus(id: number, updatecleaningstatus: UpdateBookingstatusDto) {
     return this.prisma.booking.update({
@@ -375,8 +430,7 @@ export class BookingService {
     page = 1,
     limit = 10,
     cleaningStatus?: CleaningStatus,
-    firstCleaningDate?: string,
-    createdDate?: string,
+    dateQuery?: string // 🟢 single date query
   ) {
     const skip = (page - 1) * limit;
 
@@ -388,29 +442,36 @@ export class BookingService {
       where.status = cleaningStatus;
     }
 
-    // Filter by first_cleaning_date (exact day)
-    if (firstCleaningDate) {
-      // Convert to Date
-      const date = new Date(firstCleaningDate);
-      const nextDay = new Date(date);
-      nextDay.setDate(date.getDate() + 1);
+    // 🟢 Handle single dateQuery
+    if (dateQuery) {
+      const date = new Date(dateQuery);
+      const datePlus7 = new Date(date);
+      datePlus7.setDate(date.getDate() + 7);
 
-      where.first_cleaning_date = {
-        gte: date,
-        lt: nextDay, // ensures same day range
-      };
-    }
-
-    // Filter by createdAt (exact day)
-    if (createdDate) {
-      const date = new Date(createdDate);
-      const nextDay = new Date(date);
-      nextDay.setDate(date.getDate() + 1);
-
-      where.createdAt = {
-        gte: date,
-        lt: nextDay,
-      };
+      // Prisma "OR" for first_cleaning_date or second_cleaning_date
+      where.OR = [
+        // Case 1: first_cleaning_date within 7 days after dateQuery
+        {
+          first_cleaning_date: {
+            gte: date,
+            lte: datePlus7,
+          },
+        },
+        // Case 2: first_cleaning_date before dateQuery AND second_cleaning_date within 7 days after dateQuery
+        {
+          AND: [
+            {
+              first_cleaning_date: { lt: date },
+            },
+            {
+              second_cleaning_date: {
+                gte: date,
+                lte: datePlus7,
+              },
+            },
+          ],
+        },
+      ];
     }
 
     const [bookings, total] = await this.prisma.$transaction([
@@ -436,13 +497,6 @@ export class BookingService {
     };
   }
 
-
-
-
-
-
-
-  // ##need to connect stripe webhook to confirm payment and thereafter booking
 }
 
 
