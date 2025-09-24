@@ -142,7 +142,6 @@ export class AuthService {
         };
     }
 
-
     async getAllUsers(query: PaginationQueryDto = { page: 1, limit: 10 }) {
         const page = Number(query.page) || 1;
         const limit = Number(query.limit) || 10;
@@ -152,7 +151,6 @@ export class AuthService {
             this.prisma.user.findMany({ skip, take: limit }),
             this.prisma.user.count(),
         ]);
-
         return {
             data: users,
             total,
@@ -160,8 +158,6 @@ export class AuthService {
             lastPage: Math.ceil(total / limit),
         };
     }
-
-
 
     async getUserById(id: number) {
         const user = await this.prisma.user.findUnique({
