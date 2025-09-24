@@ -116,43 +116,45 @@ jobs:
           echo "image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}" >> $GITHUB_OUTPUT
           echo "digest=${{ steps.build.outputs.digest }}" >> $GITHUB_OUTPUT
 
-  deploy-production:
-    needs: [test, build]
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    environment:
-      name: production
-      url: https://api.magnolia.com
+ deploy-production:
+   needs: [test, build]
+   runs-on: ubuntu-latest
+   if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+   environment:
+     name: production
+     url: https://api.magnolia.com
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+   steps:
+     - name: Checkout code
+       uses: actions/checkout@v4
 
-      - name: Setup SSH
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+    - name: Setup SSH
+      uses: webfactory/ssh-agent@v0.9.0
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Deploy to VPS
-        run: |
-          ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} "
-            echo '🚀 Stopping old container...'
-            docker stop magnolia || true && docker rm magnolia || true
-            
-            echo '🧹 Pruning old images and volumes...'
-            docker system prune -af --volumes
-            
-            echo '⬇️ Pulling latest image...'
-            docker pull ghcr.io/${{ github.repository }}:latest
-            
-            echo '📦 Starting new container...'
-            docker run -d \
-              --name magnolia \
-              -p 3000:3000 \
-              --restart unless-stopped \
-              --env-file /var/www/Magnolia-Touch-Backend/.env \
-              ghcr.io/${{ github.repository }}:latest
-          "
+    - name: Deploy to VPS
+      run: |
+        ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} "
+          echo '🚀 Stopping old container...'
+          docker ps -q --filter 'name=magnolia' | grep -q . && docker stop magnolia && docker rm magnolia || echo 'No old container running'
+
+          echo '🧹 Cleaning up unused data...'
+          docker system prune -af --volumes
+
+          echo '⬇️ Pulling latest image...'
+          docker pull ghcr.io/${{ github.repository }}:latest
+
+          echo '📦 Starting new container...'
+          docker run -d \
+            --name magnolia \
+            -p 3000:3000 \
+            --restart unless-stopped \
+            --env-file /var/www/Magnolia-Touch-Backend/.env \
+            ghcr.io/${{ github.repository }}:latest
+
+          echo '✅ Deployment complete!'
+        "
 
   cleanup:
     needs: [deploy-production]
