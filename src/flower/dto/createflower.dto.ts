@@ -1,6 +1,6 @@
 // dto/create-flower.dto.ts
 import { IsBoolean, IsInt, IsString, } from 'class-validator';
-import { Transform } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 
 export class CreateFlowerDto {
   @IsString()
@@ -12,6 +12,7 @@ export class CreateFlowerDto {
   @IsString()
   Price: string;
 
+  @Type(() => Number)
   @IsInt()
   stock_count: number;
 
