@@ -125,9 +125,6 @@ jobs:
       url: https://api.magnolia.com
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.9.0
         with:
@@ -140,6 +137,14 @@ jobs:
       - name: Deploy to VPS
         run: |
           ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} "
+            echo '📂 Moving to project directory...'
+            cd /var/www/Magnolia-Touch-Backend || exit 1
+
+            echo '🔄 Resetting local repo and pulling latest code...'
+            git fetch --all
+            git reset --hard origin/main
+            git pull origin main
+
             echo '🚀 Stopping old container...'
             docker ps -q --filter 'name=magnolia' | grep -q . && docker stop magnolia && docker rm magnolia || echo 'No old container running'
 
