@@ -138,29 +138,27 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} "
             echo '📂 Moving to project directory...'
-            cd /var/www/Magnolia-Touch-Backend || exit 1
+            cd var || exit 1
+            cd www
+            cd Magnolia-Touch-Backend
 
             echo '🔄 Resetting local repo and pulling latest code...'
             git fetch --all
             git reset --hard origin/main
             git pull origin main
+            docker build -t nestjs-app .
 
             echo '🚀 Stopping old container...'
-            docker ps -q --filter 'name=magnolia' | grep -q . && docker stop magnolia && docker rm magnolia || echo 'No old container running'
+            docker stop nestjs-container
+            docker rm nestjs-container
+            docker run -d \
+              --name nestjs-container \
+              -p 3000:3000 \
+              --env-file .env \
+              nestjs-app
 
             echo '🧹 Cleaning up unused data...'
             docker system prune -af --volumes
-
-            echo '⬇️ Pulling latest image...'
-            docker pull ghcr.io/${{ env.REPO_LC }}:latest
-
-            echo '📦 Starting new container...'
-            docker run -d \
-              --name magnolia \
-              -p 3000:3000 \
-              --restart unless-stopped \
-              --env-file /var/www/Magnolia-Touch-Backend/.env \
-              ghcr.io/${{ env.REPO_LC }}:latest
 
             echo '✅ Deployment complete!'
           "
