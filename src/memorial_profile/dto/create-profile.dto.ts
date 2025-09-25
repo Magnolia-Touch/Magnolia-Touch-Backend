@@ -78,8 +78,7 @@ export class EventDto {
     @IsString()
     event: string;
 }
-
-// ---- Main DTO ----
+// CreateProfileDto stays the same
 export class CreateProfileDto {
     @IsString()
     firstName: string;
