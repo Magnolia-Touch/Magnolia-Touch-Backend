@@ -1,2 +1,10 @@
 BOOKING STATUS TRACKING UPDATING CODE ADDED.NEED TO Test.
 MEMORIAL ORDER TRACKING UPDATING CODE TO BE DONE
+
+
+create booking. booking instance need to create no of years times and saved under user profile. years can be increased for each saving instances
+add an is_active instance also
+
+
+just before production
+after main db has been connected, a validation need to 

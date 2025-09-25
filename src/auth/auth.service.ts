@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, HttpStatus, ConflictException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, HttpStatus, ConflictException, NotFoundException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -6,6 +6,7 @@ import { UserService } from 'src/user/user.service';
 import { Role } from '@prisma/client';
 import { RegisterDto } from './dto/register.dto';
 import { PaginationQueryDto } from 'src/common/dto/paginationquery.dto';
+import { UpdateUserDto } from 'src/user/dto/update-user.dto';
 
 @Injectable()
 export class AuthService {
@@ -148,9 +149,21 @@ export class AuthService {
         const skip = (page - 1) * limit;
 
         const [users, total] = await this.prisma.$transaction([
-            this.prisma.user.findMany({ skip, take: limit }),
+            this.prisma.user.findMany({
+                skip,
+                take: limit,
+                select: {
+                    email: true,
+                    customer_name: true,
+                    Phone: true,
+                    deadPersonProfiles: true,
+                    Booking: true
+                    // ❌ password intentionally omitted
+                },
+            }),
             this.prisma.user.count(),
         ]);
+
         return {
             data: users,
             total,
@@ -158,6 +171,7 @@ export class AuthService {
             lastPage: Math.ceil(total / limit),
         };
     }
+
 
     async getUserById(id: number) {
         const user = await this.prisma.user.findUnique({
@@ -237,4 +251,30 @@ export class AuthService {
             status: HttpStatus.OK,
         };
     }
+
+
+
+    async updateUser(id: number, data: UpdateUserDto) {
+        // 1. Check if user exists
+        const user = await this.prisma.user.findUnique({
+            where: { customer_id: id },
+        });
+        if (!user) {
+            throw new NotFoundException(`User with ID ${id} not found`);
+        }
+
+        // 2. Hash password if present
+        let updateData = { ...data };
+        if (data.password) {
+            const hashedPassword = await bcrypt.hash(data.password, 10);
+            updateData.password = hashedPassword;
+        }
+
+        // 3. Perform update
+        return this.prisma.user.update({
+            where: { customer_id: id },
+            data: updateData,
+        });
+    }
+
 }

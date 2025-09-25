@@ -17,29 +17,44 @@ import { MemorialProfileModule } from './memorial_profile/memorial.module';
 import { ServicesModule } from './services/services.module';
 import { LogicModule } from './logics/logics.module';
 import { OrdersModule } from './orders/orders.module';
+import { MailerModule } from '@nestjs-modules/mailer';
 
 @Module({
   imports: [ConfigModule.forRoot({
-      isGlobal: true, // makes ConfigService available app-wide
-    }),
-    UserModule, 
-    AuthModule, 
-    PrismaModule, 
-    FlowersModule, 
-    BookingModule, 
-    SubscriptionModule, 
-    ChurchModule, 
-    FlowersModule, 
-    CartModule, 
-    ProductsModule, 
+    isGlobal: true, // makes ConfigService available app-wide
+  }),
+  MailerModule.forRoot({
+    transport: {
+      host: 'smtp.gmail.com',       // your SMTP host
+      port: 587,
+      secure: false,
+      auth: {
+        user: process.env.MAIL_USER,
+        pass: process.env.MAIL_PASS,
+      },
+    },
+    defaults: {
+      from: '"No Reply" <no-wishyougrowth@gmail.com>',
+    },
+  }),
+    UserModule,
+    AuthModule,
+    PrismaModule,
+    FlowersModule,
+    BookingModule,
+    SubscriptionModule,
+    ChurchModule,
+    FlowersModule,
+    CartModule,
+    ProductsModule,
     MemorialProfileModule,
     QrModule,
     ServicesModule,
     LogicModule,
     OrdersModule,
-    StripeModule.forRootAsync()], 
+  StripeModule.forRootAsync()],
   controllers: [AppController],
   providers: [AppService],
 })
 
-export class AppModule {}
+export class AppModule { }

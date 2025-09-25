@@ -1,4 +1,4 @@
-import { IsInt, IsString } from 'class-validator';
+import { IsBoolean, IsInt, IsString } from 'class-validator';
 
 export class SubscriptionDto {
 
@@ -13,5 +13,8 @@ export class SubscriptionDto {
 
   @IsString()
   Price: string;
-  
+
+  @IsBoolean()
+  isSubscriptionPlan: boolean;
+
 }

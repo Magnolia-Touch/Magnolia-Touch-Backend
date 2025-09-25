@@ -202,4 +202,22 @@ export class OrdersService {
     };
   }
 
+  // orders.service.ts
+  async updateTracking(id: number, dto: { tracking_details?: string }) {
+    const order = await this.prisma.orders.findUnique({ where: { id } });
+
+    if (!order) {
+      throw new NotFoundException(`Order with ID ${id} not found`);
+    }
+
+    return this.prisma.orders.update({
+      where: { id },
+      data: {
+        tracking_details: dto.tracking_details,
+        updatedAt: new Date(),
+      },
+    });
+  }
+
+
 }

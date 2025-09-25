@@ -50,7 +50,6 @@ export class FlowersService {
 
   async getAllFlowers() {
     const flowers = await this.prisma.flowers.findMany();
-
     return {
       message: 'All flowers fetched successfully',
       data: flowers,

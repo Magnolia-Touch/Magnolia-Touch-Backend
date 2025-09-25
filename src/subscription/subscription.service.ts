@@ -5,7 +5,7 @@ import { NotFoundException, BadRequestException } from '@nestjs/common';
 
 @Injectable()
 export class SubscriptionService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async create(dto: SubscriptionDto) {
     const created = await this.prisma.subscriptionPlan.create({
@@ -14,6 +14,7 @@ export class SubscriptionService {
         Subscription_name: dto.Subscription_name,
         Frequency: dto.Frequency,
         Price: dto.Price,
+        isSubscriptionPlan: dto.isSubscriptionPlan
       },
     });
 
@@ -49,4 +50,40 @@ export class SubscriptionService {
       status: HttpStatus.OK,
     };
   }
+
+  // Update a subscription plan (PATCH)
+  async updateSubscriptionPlan(
+    id: number,
+    dto: Partial<SubscriptionDto>, // allows partial updates
+  ) {
+    const updated = await this.prisma.subscriptionPlan.update({
+      where: { Subscription_id: id },
+      data: {
+        discription: dto.discription,
+        Subscription_name: dto.Subscription_name,
+        Frequency: dto.Frequency,
+        Price: dto.Price,
+        isSubscriptionPlan: dto.isSubscriptionPlan,
+      },
+    });
+
+    return {
+      message: 'Subscription plan updated successfully',
+      data: updated,
+      status: HttpStatus.OK,
+    };
+  }
+
+  // Delete a subscription plan
+  async deleteSubscriptionPlan(id: number) {
+    await this.prisma.subscriptionPlan.delete({
+      where: { Subscription_id: id },
+    });
+
+    return {
+      message: 'Subscription plan deleted successfully',
+      status: HttpStatus.OK,
+    };
+  }
+
 }

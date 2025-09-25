@@ -42,16 +42,15 @@ enum CleaningStatus {
   CANCELLED
 }
 
-
 model User {
-  customer_id   Int    @id @default(autoincrement())
+  customer_id   Int      @id @default(autoincrement())
   customer_name String
-  email         String @unique
+  email         String   @unique
   Phone         String
   password      String
-  role          Role   @default(USER)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  role          Role     @default(USER)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   Orders               Orders[]
   Church               Church[]
@@ -65,7 +64,7 @@ model User {
 }
 
 model UserAddress {
-  deli_address_id Int     @id @default(autoincrement())
+  deli_address_id Int      @id @default(autoincrement())
   Name            String
   street          String
   town_or_city    String
@@ -73,8 +72,8 @@ model UserAddress {
   postcode        String
   phone           String
   email           String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   User            User?    @relation(fields: [userCustomer_id], references: [customer_id])
   userCustomer_id Int?
@@ -92,8 +91,8 @@ model BillingAddress {
   email           String
   User            User?    @relation(fields: [userCustomer_id], references: [customer_id])
   userCustomer_id Int?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
   Orders          Orders[]
 }
 
@@ -105,22 +104,21 @@ model Products {
   short_Description    String             @db.Text
   detailed_description String?            @db.Text
   company_guarantee    String?            @db.Text
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
   Dimensions           ProductDimension[]
   CartItem             CartItem[]
 }
 
 model Services {
-  services_id Int    @id @default(autoincrement())
+  services_id Int      @id @default(autoincrement())
   image       String
   name        String
   discription String
   features    String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
-
 
 model Cart {
   cartId       Int        @id @default(autoincrement())
@@ -130,12 +128,11 @@ model Cart {
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
-
   user User @relation(fields: [userId], references: [customer_id])
 }
 
 model CartItem {
-  id        Int   @id @default(autoincrement())
+  id        Int      @id @default(autoincrement())
   cartId    Int
   productId Int
   quantity  Int
@@ -152,49 +149,50 @@ model ProductDimension {
   dimension          String
   Products           Products? @relation(fields: [productsProduct_id], references: [product_id])
   productsProduct_id Int?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 }
 
 model SubscriptionPlan {
-  Subscription_id   Int    @id @default(autoincrement())
-  discription       String
-  Subscription_name String
-  Frequency         Int
-  Price             String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  Subscription_id    Int      @id @default(autoincrement())
+  discription        String
+  Subscription_name  String
+  Frequency          Int
+  Price              String
+  isSubscriptionPlan Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   bookings Booking[]
 }
 
 model Flowers {
-  flower_id Int @id @default(autoincrement())
+  flower_id   Int      @id @default(autoincrement())
   image       String?
   Name        String
   Price       String
   Description String?
-  stock_count Int @default(0)
-  in_stock    Boolean @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  stock_count Int      @default(0)
+  in_stock    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   bookings Booking[]
 }
 
 model Church {
-  church_id       Int       @id @default(autoincrement())
+  church_id       Int      @id @default(autoincrement())
   church_name     String
   city            String
   state           String
   church_address  String?
-  User            User?     @relation(fields: [userCustomer_id], references: [customer_id])
+  User            User?    @relation(fields: [userCustomer_id], references: [customer_id])
   userCustomer_id Int?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  Booking         Booking[]
-  Orders          Orders[]
+  Booking Booking[]
+  Orders  Orders[]
 }
 
 model Booking {
@@ -204,7 +202,7 @@ model Booking {
   plot_no                  String?
   User_id                  Int
   church_id                Int
-  Subscription_id          Int
+  Subscription_id          Int?
   amount                   Int            @default(0)
   first_cleaning_date      DateTime
   second_cleaning_date     DateTime?
@@ -214,28 +212,28 @@ model Booking {
   anniversary_date         DateTime?
   status                   CleaningStatus @default(PENDING)
   is_bought                Boolean        @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt                DateTime       @default(now())
+  updatedAt                DateTime       @updatedAt
 
-  user         User             @relation(fields: [User_id], references: [customer_id])
-  Church       Church           @relation(fields: [church_id], references: [church_id])
-  subscription SubscriptionPlan @relation(fields: [Subscription_id], references: [Subscription_id])
-  flower       Flowers?         @relation(fields: [Flower_id], references: [flower_id])
+  user         User              @relation(fields: [User_id], references: [customer_id])
+  Church       Church            @relation(fields: [church_id], references: [church_id])
+  subscription SubscriptionPlan? @relation(fields: [Subscription_id], references: [Subscription_id], onDelete: SetNull)
+  flower       Flowers?          @relation(fields: [Flower_id], references: [flower_id])
 }
 
 model Reviews {
-  Review_id          Int    @id @default(autoincrement())
+  Review_id          Int      @id @default(autoincrement())
   User_Id            Int
   Review_Description String
   Rating             Int
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   user User @relation(fields: [User_Id], references: [customer_id])
 }
 
 model DeadPersonProfile {
-  profile_id       Int     @id @default(autoincrement())
+  profile_id       Int      @id @default(autoincrement())
   owner_id         String
   firstName        String
   lastName         String
@@ -244,10 +242,10 @@ model DeadPersonProfile {
   born_date        String
   death_date       String
   memorial_place   String?
-  is_paid          Boolean @default(false)
-  slug             String  @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  is_paid          Boolean  @default(false)
+  slug             String   @unique
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   biography   Biography[]
   gallery     Gallery[]
@@ -260,12 +258,11 @@ model DeadPersonProfile {
 }
 
 model SocialLinks {
-  id              Int          @id @default(autoincrement())
+  id              Int      @id @default(autoincrement())
   socialMediaName String?
   link            String?
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
-
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   deadPersonProfiles String
   profile            DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
@@ -278,37 +275,36 @@ model Events {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-
   deadPersonProfiles String
   profile            DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
 }
 
 model Biography {
-  biography_id Int    @id @default(autoincrement())
+  biography_id Int      @id @default(autoincrement())
   discription  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   deadPersonProfiles String
   profile            DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
 }
 
 model Gallery {
-  gallery_id Int     @id @default(autoincrement())
+  gallery_id Int      @id @default(autoincrement())
   link       String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   deadPersonProfiles String
   profile            DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
 }
 
 model Family {
-  family_id    Int           @id @default(autoincrement())
+  family_id    Int      @id @default(autoincrement())
   relationship String
   name         String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   deadPersonProfiles String
   profile            DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
@@ -318,14 +314,14 @@ model GuestBook {
   guestbook_id       Int              @id @default(autoincrement())
   guestBookItems     GuestBookItems[]
   deadPersonProfiles String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
 
   profile DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
 }
 
 model GuestBookItems {
-  guestbookitems_id Int     @id @default(autoincrement())
+  guestbookitems_id Int      @id @default(autoincrement())
   guestbook_id      Int
   first_name        String
   last_name         String?
@@ -334,9 +330,9 @@ model GuestBookItems {
   message           String
   photo_upload      String?
   date              String
-  is_approved       Boolean @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  is_approved       Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   profile GuestBook @relation(fields: [guestbook_id], references: [guestbook_id])
 }
@@ -375,8 +371,8 @@ model Orders {
 model DeliveryAgentProfile {
   id               Int      @id @default(autoincrement())
   deliveryagent_id Int
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
   orders           Orders[]
 
   User User? @relation(fields: [deliveryagent_id], references: [customer_id])

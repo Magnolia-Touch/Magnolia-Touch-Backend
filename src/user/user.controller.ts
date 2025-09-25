@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, Param, UseGuards, Request, Req, Patch } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, UseGuards, Request, Put, ParseIntPipe, Req } from '@nestjs/common';
 import { RolesGuard } from 'src/common/decoraters/roles.guard';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard'
 import { Roles } from 'src/common/decoraters/roles.decorator';
@@ -6,6 +6,7 @@ import { CreateUserAddressDto } from './dto/create-user-address.dto';
 import { CreateBillingAddressDto } from './dto/create-billing-address.dto';
 import { PrismaClient } from '@prisma/client/scripts/default-index';
 import { UserService } from './user.service';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 
 @Controller('user')
@@ -49,6 +50,8 @@ export class UserController {
     const user = req.user.customer_id
     return this.userservice.getActiveSubscription(user);
   }
+
+
 
 
 

@@ -7,6 +7,7 @@ import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/common/decoraters/roles.guard';
 import { Roles } from 'src/common/decoraters/roles.decorator';
 import { OrderStatus } from '@prisma/client';
+import { UpdateTrackingDto } from './dto/update-tracking.dto';
 
 @Controller('orders')
 export class OrdersController {
@@ -63,7 +64,6 @@ export class OrdersController {
     return this.ordersService.findAllByAdmin(pageNum, limitNum);
   }
 
-
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
   @Get('all-orders/:id')
@@ -93,6 +93,14 @@ export class OrdersController {
       createdDate,
       orderNumber,
     );
+  }
+
+  @Patch(':id/tracking')
+  async updateTracking(
+    @Param('id') id: string,
+    @Body() dto: UpdateTrackingDto,
+  ) {
+    return this.ordersService.updateTracking(+id, dto);
   }
 
 }
