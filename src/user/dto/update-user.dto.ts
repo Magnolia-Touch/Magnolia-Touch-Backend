@@ -10,11 +10,7 @@ export class UpdateUserDto {
     email?: string;
 
     @IsOptional()
-    @IsPhoneNumber()
+    @IsString()
     Phone: string
 
-    @IsOptional()
-    @IsString()
-    @MinLength(6)
-    password?: string;
 }
