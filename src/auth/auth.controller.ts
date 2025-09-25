@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, Param, UseGuards, Request, Query, Put } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, UseGuards, Request, Query, Put, Patch } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { RolesGuard } from 'src/common/decoraters/roles.guard';
@@ -6,6 +6,9 @@ import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard'
 import { Roles } from 'src/common/decoraters/roles.decorator';
 import { PaginationQueryDto } from 'src/common/dto/paginationquery.dto';
 import { UpdateUserDto } from 'src/user/dto/update-user.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -37,14 +40,17 @@ export class AuthController {
     return this.authservice.logout();
   }
 
-
-  // ✅ GET all users (admin-level access)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
   @Get('users')
-  getAllUsers(@Query() query: PaginationQueryDto) {
-    return this.authservice.getAllUsers(query);
+  async getAllUsers(
+    @Query('search') search: string,
+    @Query('page') page: string,
+    @Query('limit') limit: string,
+  ) {
+    return this.authservice.getAllUsers({ search, page, limit });
   }
+
 
   @UseGuards(JwtAuthGuard)
   @Get('profile')
@@ -61,6 +67,23 @@ export class AuthController {
   ) {
     const user = req.user.customer_id
     return this.authservice.updateUser(user, data);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('change-password')
+  async changePassword(@Request() req, @Body() dto: ChangePasswordDto) {
+    const userId = req.user.customer_id; // assuming JWT payload has { id }
+    return this.authservice.changePassword(userId, dto);
+  }
+
+  @Post('forgot-password')
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.authservice.forgotPassword(dto);
+  }
+
+  @Post('reset-password')
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.authservice.resetPassword(dto);
   }
 
 }

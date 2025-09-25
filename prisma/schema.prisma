@@ -43,14 +43,16 @@ enum CleaningStatus {
 }
 
 model User {
-  customer_id   Int      @id @default(autoincrement())
-  customer_name String
-  email         String   @unique
-  Phone         String
-  password      String
-  role          Role     @default(USER)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  customer_id       Int      @id @default(autoincrement())
+  customer_name     String
+  email             String   @unique
+  Phone             String
+  password          String
+  role              Role     @default(USER)
+  resetOtp          String?   @default("0") // string default
+  resetOtpExpiresAt DateTime? @default(now()) // set to current time
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   Orders               Orders[]
   Church               Church[]
