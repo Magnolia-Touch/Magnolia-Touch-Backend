@@ -146,6 +146,9 @@ jobs:
             git fetch --all
             git reset --hard origin/main
             git pull origin main
+            npx prisma migrate deploy
+            npx prisma generate
+            npm run seed
             docker build -t nestjs-app .
 
             echo '🚀 Stopping old container...'
