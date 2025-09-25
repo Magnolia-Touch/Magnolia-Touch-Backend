@@ -156,8 +156,8 @@ export class AuthService {
                     email: true,
                     customer_name: true,
                     Phone: true,
-                    // deadPersonProfiles: true,
-                    // Booking: true
+                    deadPersonProfiles: true,
+                    Booking: true
                     // ❌ password intentionally omitted
                 },
             }),
