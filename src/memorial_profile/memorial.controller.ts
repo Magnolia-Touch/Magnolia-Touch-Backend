@@ -104,6 +104,23 @@ export class MemorialController {
     return this.deadPersonProfileService.getProfile(slug);
   }
 
+  @UseGuards(JwtAuthGuard)
+  @Get('my-memorials')
+  async getProfileList(
+    @Request() req,
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '10',
+    @Query('search') search?: string,
+  ) {
+    const email = req.user.email
+    return this.deadPersonProfileService.getProfileList(
+      email,
+      Number(page),
+      Number(limit),
+      search,
+    );
+  }
+
 
   @Post('add-guestbook')
   @UseInterceptors(FileInterceptor('image'))

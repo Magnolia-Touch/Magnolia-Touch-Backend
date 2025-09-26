@@ -121,6 +121,68 @@ export class MemorialProfileService {
   }
 
 
+  async getProfileList(email: string, page: number, limit: number, search?: string) {
+    const skip = (page - 1) * limit;
+
+    const whereCondition: any = {
+      owner_id: email,
+    };
+
+    if (search) {
+      whereCondition.OR = [
+        { firstName: { contains: search.toLowerCase() } },
+        { lastName: { contains: search.toLowerCase() } },
+      ];
+    }
+
+    const [profiles, totalCount] = await this.prisma.$transaction([
+      this.prisma.deadPersonProfile.findMany({
+        where: whereCondition,
+        skip,
+        take: limit,
+        include: {
+          biography: true,
+          family: true,
+          gallery: true,
+          guestBook: true,
+          Events: true,
+          SocialLinks: true,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      }),
+      this.prisma.deadPersonProfile.count({ where: whereCondition }),
+    ]);
+
+    if (!profiles || profiles.length === 0) {
+      return {
+        message: 'No Profiles Found',
+        data: [],
+        pagination: {
+          total: 0,
+          page,
+          limit,
+          totalPages: 0,
+        },
+        status: HttpStatus.NOT_FOUND,
+      };
+    }
+
+    return {
+      message: 'Profiles fetched successfully',
+      data: profiles,
+      pagination: {
+        total: totalCount,
+        page,
+        limit,
+        totalPages: Math.ceil(totalCount / limit),
+      },
+      status: HttpStatus.OK,
+    };
+  }
+
+
   async addGuestbook(slug: string, dto: CreateGuestBookDto, image: Express.Multer.File) {
     const { first_name, last_name, guestemail, phone, message } = dto;
     let imageUrl: string | null = null;
@@ -882,9 +944,8 @@ export class MemorialProfileService {
     // SEARCH across firstName, lastName, description, slug
     if (search) {
       where.OR = [
-        { firstName: { contains: search, mode: 'insensitive' } },
-        { lastName: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } },
+        { firstName: { contains: search.toLowerCase() } },
+        { lastName: { contains: search.toLowerCase() } },
         { slug: { contains: search.toLowerCase() } },
       ];
     }
