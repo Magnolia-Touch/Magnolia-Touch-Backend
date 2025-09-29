@@ -329,7 +329,7 @@ model GuestBookItems {
   last_name         String?
   email             String?
   phone             String?
-  message           String
+  message           String   @db.Text
   photo_upload      String?
   date              String
   is_approved       Boolean  @default(false)

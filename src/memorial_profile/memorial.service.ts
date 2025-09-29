@@ -222,6 +222,17 @@ export class MemorialProfileService {
         is_approved: false
       },
     });
+
+    // ✅ Send email notification to profile owner here
+    const profileOwnerEmail = profile.owner_id; // adjust field based on your DB structure
+    if (profileOwnerEmail) {
+      const visitorName = `${first_name} ${last_name}`.trim();
+      await this.sendProfileOwnerNotification(
+        profileOwnerEmail,
+        visitorName,
+        profile.firstName || profile.lastName // adjust based on your DB field
+      );
+    }
     return {
       message: `GuestBook entry added`,
       data: created,
@@ -230,57 +241,148 @@ export class MemorialProfileService {
   }
 
 
-  async getGuestBookApproved(slug: string) {
+  async getGuestBookApproved(
+    slug: string,
+    page = 1,
+    limit = 10,
+    search?: string,
+  ) {
+    // find profile first
     const profile = await this.prisma.guestBook.findFirst({
       where: { deadPersonProfiles: slug },
-      include: {
-        guestBookItems: {
-          where: {
-            is_approved: true
-          }
-        }
-      }
+      include: { profile: { select: { owner_id: true } } }
     });
+
     if (!profile) {
       throw new NotFoundException('Profile not found');
     }
+
+    // build search filter for guestBookItems
+    const searchFilter = search
+      ? {
+        OR: [
+          { first_name: { contains: search.toLowerCase() } },
+          { last_name: { contains: search.toLowerCase() } },
+        ],
+      }
+      : {};
+
+    const skip = (page - 1) * limit;
+
+    // count total for pagination
+    const totalItems = await this.prisma.guestBookItems.count({
+      where: {
+        guestbook_id: profile.guestbook_id,
+        is_approved: true,
+        ...searchFilter,
+      },
+    });
+
+    // fetch paginated guestbook items
+    const guestBookItems = await this.prisma.guestBookItems.findMany({
+      where: {
+        guestbook_id: profile.guestbook_id,
+        is_approved: true,
+        ...searchFilter,
+      },
+      skip,
+      take: limit,
+      orderBy: { createdAt: 'desc' },
+    });
+
     return {
       message: 'Profile fetched successfully',
-      data: profile,
+      data: {
+        ...profile,
+        guestBookItems,
+        pagination: {
+          total: totalItems,
+          page,
+          limit,
+          totalPages: Math.ceil(totalItems / limit),
+        },
+      },
       status: HttpStatus.OK,
     };
   }
 
-  async getGuestBookUnApproved(email: string, slug: string) {
+  async getGuestBookUnApproved(
+    email: string,
+    slug: string,
+    page = 1,
+    limit = 10,
+    search?: string,
+  ) {
+    // ✅ validate profile ownership
     const profile = await this.prisma.deadPersonProfile.findUnique({
-      where: { slug }
+      where: { slug },
     });
 
     if (!profile) {
       throw new NotFoundException('Profile not found');
     }
-    if (email != profile.owner_id) {
+    if (email !== profile.owner_id) {
       throw new ForbiddenException('You are not authorized to view this guestbook');
     }
+
+    // ✅ find guestbook
     const guestbook = await this.prisma.guestBook.findFirst({
       where: { deadPersonProfiles: slug },
-      include: {
-        guestBookItems: {
-          where: {
-            is_approved: false
-          }
-        }
-      }
+      include: { profile: { select: { owner_id: true } } }
     });
     if (!guestbook) {
       throw new NotFoundException('Guestbook not found for this profile');
     }
+
+    // ✅ search filter
+    const searchFilter = search
+      ? {
+        OR: [
+          { first_name: { contains: search.toLowerCase() } },
+          { last_name: { contains: search.toLowerCase() } },
+        ],
+      }
+      : {};
+
+    const skip = (page - 1) * limit;
+
+    // ✅ count total unapproved items
+    const totalItems = await this.prisma.guestBookItems.count({
+      where: {
+        guestbook_id: guestbook.guestbook_id,
+        is_approved: false,
+        ...searchFilter,
+      },
+    });
+
+    // ✅ fetch paginated unapproved guestbook items
+    const guestBookItems = await this.prisma.guestBookItems.findMany({
+      where: {
+        guestbook_id: guestbook.guestbook_id,
+        is_approved: false,
+        ...searchFilter,
+      },
+      skip,
+      take: limit,
+      orderBy: { createdAt: 'desc' },
+    });
+
     return {
       message: 'Profile fetched successfully',
-      data: guestbook,
+      data: {
+        ...guestbook,
+        guestBookItems,
+        pagination: {
+          total: totalItems,
+          page,
+          limit,
+          totalPages: Math.ceil(totalItems / limit),
+        },
+      },
       status: HttpStatus.OK,
     };
   }
+
 
   async updateGuestBook(email: string, slug: string, id: number) {
     const profile = await this.prisma.deadPersonProfile.findUnique({
@@ -290,8 +392,8 @@ export class MemorialProfileService {
       },
     });
 
-    if (!profile || !profile.gallery.length) {
-      throw new NotFoundException('Gallery not found for this profile');
+    if (!profile) {
+      throw new NotFoundException('Profile not found');
     }
     if (email != profile.owner_id) {
       throw new ForbiddenException('You are not authorized to view this guestbook');
@@ -1025,21 +1127,14 @@ export class MemorialProfileService {
 
   async sendProfileOwnerNotification(ownerEmail: string, visitorName: string, profileName: string) {
     const subject = `New Memory Shared on ${profileName}`;
-    const text = `
-    Hi,
-    
-    One memorial visitor, ${visitorName}, has shared their memory on ${profileName}'s profile.
-    
-    Please review and approve/deny it to appear publicly on the profile.
-    
-    Regards,
-    Your App Team
-    `;
-
     await this.emailService.sendMail({
       to: ownerEmail,
       subject,
-      text,
+      template: "memoryNotification",
+      context: {
+        visitorName,
+        profileName
+      }
     });
   }
 
