@@ -18,6 +18,8 @@ import { ServicesModule } from './services/services.module';
 import { LogicModule } from './logics/logics.module';
 import { OrdersModule } from './orders/orders.module';
 import { MailerModule } from '@nestjs-modules/mailer';
+import { PugAdapter } from '@nestjs-modules/mailer/dist/adapters/pug.adapter';
+import { join } from 'path';
 
 @Module({
   imports: [ConfigModule.forRoot({
@@ -36,7 +38,15 @@ import { MailerModule } from '@nestjs-modules/mailer';
     defaults: {
       from: '"No Reply" <no-wishyougrowth@gmail.com>',
     },
+    template: {
+      dir: join(process.cwd(), 'src/templates'), // ✅ absolute path
+      adapter: new PugAdapter(),
+      options: {
+        strict: true,
+      },
+    }
   }),
+
     UserModule,
     AuthModule,
     PrismaModule,

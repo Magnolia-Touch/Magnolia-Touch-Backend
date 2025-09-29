@@ -135,17 +135,41 @@ export class MemorialController {
 
 
   @Get('guestmessages')
-  async getGuestBookApproved(@Query('code') slug: string) {
-    return this.deadPersonProfileService.getGuestBookApproved(slug);
+  async getGuestBookApproved(
+    @Query('code') slug: string,
+    @Query('page') page = '1',
+    @Query('limit') limit = '10',
+    @Query('search') search?: string,
+  ) {
+    return this.deadPersonProfileService.getGuestBookApproved(
+      slug,
+      Number(page),
+      Number(limit),
+      search,
+    );
   }
+
 
 
   @UseGuards(JwtAuthGuard)
   @Get('unapproved-guestmessages')
-  async getGuestBookUnApproved(@Request() req, @Query('code') slug: string) {
-    const email = req.user.email
-    return this.deadPersonProfileService.getGuestBookUnApproved(email, slug);
+  async getGuestBookUnApproved(
+    @Request() req,
+    @Query('code') slug: string,
+    @Query('page') page = '1',
+    @Query('limit') limit = '10',
+    @Query('search') search?: string,
+  ) {
+    const email = req.user.email;
+    return this.deadPersonProfileService.getGuestBookUnApproved(
+      email,
+      slug,
+      Number(page),
+      Number(limit),
+      search,
+    );
   }
+
 
   @UseGuards(JwtAuthGuard)
   @Patch('approve-guestmessages')
@@ -324,4 +348,3 @@ export class MemorialController {
     }
   }
 }
-
