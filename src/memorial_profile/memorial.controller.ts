@@ -351,7 +351,7 @@ export class MemorialController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
   @Get('counts')
-  async getBookingCounts() {
-    return this.deadPersonProfileService.bookingCounts();
+  async getBookingCounts(@Query('date') date: string) {
+    return this.deadPersonProfileService.bookingCounts(date);
   }
 }
