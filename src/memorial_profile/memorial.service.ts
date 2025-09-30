@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException, HttpException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { S3Service } from '../s3/s3.service';
 import { CreateDeadPersonProfileDto } from './dto/memorial_profile.dto';
@@ -1138,12 +1138,23 @@ export class MemorialProfileService {
     });
   }
 
-  async bookingCounts() {
-    const currentDate = new Date();
-    const startOfDay = new Date(currentDate.setHours(0, 0, 0, 0));
-    const endOfDay = new Date(currentDate.setHours(23, 59, 59, 999));
+  async bookingCounts(dateQuery: string) {
+    // validate input
+    const isoRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!isoRegex.test(dateQuery)) {
+      throw new HttpException(
+        `Invalid date format: ${dateQuery}. Use YYYY-MM-DD`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
 
-    // 1. Cleaning services booked today
+    // build start and end of the requested date
+    const baseDate = new Date(`${dateQuery}T00:00:00.000Z`);
+    const startOfDay = new Date(baseDate);
+    const endOfDay = new Date(baseDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    // 1. Cleaning services booked on that date
     const cleaningServiceCount = await this.prisma.booking.count({
       where: {
         createdAt: {
@@ -1153,7 +1164,7 @@ export class MemorialProfileService {
       },
     });
 
-    // 2. Person profile created today (only paid ones)
+    // 2. Paid person profiles created on that date
     const deadPersonProfileCount = await this.prisma.deadPersonProfile.count({
       where: {
         is_paid: true,
@@ -1164,7 +1175,7 @@ export class MemorialProfileService {
       },
     });
 
-    // 3. Cleaning services scheduled to be cleaned today
+    // 3. Cleaning services scheduled on that date
     const todayCleaningServiceCount = await this.prisma.booking.count({
       where: {
         OR: [
