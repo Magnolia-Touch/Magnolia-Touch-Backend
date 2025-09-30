@@ -1138,5 +1138,63 @@ export class MemorialProfileService {
     });
   }
 
+  async bookingCounts() {
+    const currentDate = new Date();
+    const startOfDay = new Date(currentDate.setHours(0, 0, 0, 0));
+    const endOfDay = new Date(currentDate.setHours(23, 59, 59, 999));
+
+    // 1. Cleaning services booked today
+    const cleaningServiceCount = await this.prisma.booking.count({
+      where: {
+        createdAt: {
+          gte: startOfDay,
+          lte: endOfDay,
+        },
+      },
+    });
+
+    // 2. Person profile created today (only paid ones)
+    const deadPersonProfileCount = await this.prisma.deadPersonProfile.count({
+      where: {
+        is_paid: true,
+        createdAt: {
+          gte: startOfDay,
+          lte: endOfDay,
+        },
+      },
+    });
+
+    // 3. Cleaning services scheduled to be cleaned today
+    const todayCleaningServiceCount = await this.prisma.booking.count({
+      where: {
+        OR: [
+          {
+            first_cleaning_date: {
+              gte: startOfDay,
+              lte: endOfDay,
+            },
+          },
+          {
+            second_cleaning_date: {
+              gte: startOfDay,
+              lte: endOfDay,
+            },
+          },
+        ],
+      },
+    });
+
+    return {
+      cleaningServiceCount,
+      deadPersonProfileCount,
+      todayCleaningServiceCount,
+      total:
+        cleaningServiceCount +
+        deadPersonProfileCount +
+        todayCleaningServiceCount,
+    };
+  }
+
+
 
 }
