@@ -100,7 +100,7 @@ export class BookingService {
     const totalYears = no_of_subsribe_years ?? 1;
 
     let firstBookingCreated: any;
-
+    const bkng_parent_id = `${generateOrderIdforService()}-PARENT`;
     for (let i = 0; i < totalYears; i++) {
       const newFirstDate = addYearsKeepMonthDay(first_date, i);
 
@@ -114,6 +114,7 @@ export class BookingService {
 
       const booking = await this.prisma.booking.create({
         data: {
+          bkng_parent_id: bkng_parent_id,
           booking_ids: `${generateOrderIdforService()}-${i + 1}`, // guarantee uniqueness
           User_id: user_Id,
           church_id: church.church_id,
@@ -129,6 +130,7 @@ export class BookingService {
           no_of_subscription_years: totalYears,
           status: 'PENDING',
           is_bought: false,
+          totalAmount: amount
         },
       });
 
