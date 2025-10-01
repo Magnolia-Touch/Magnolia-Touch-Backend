@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req, Query, ParseIntPipe } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
@@ -102,5 +102,11 @@ export class OrdersController {
   ) {
     return this.ordersService.updateTracking(+id, dto);
   }
+
+  @Patch(':id/mark-paid')
+  async markAsPaid(@Param('id', ParseIntPipe) id: number) {
+    return this.ordersService.markOrderAsPaid(id);
+  }
+
 
 }

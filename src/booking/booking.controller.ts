@@ -72,13 +72,7 @@ export class BookingController {
         if (!bookingWithCheckout) {
             return { message: 'Booking not found or access denied' };
         }
-
         return bookingWithCheckout;
-    }
-
-    @Patch(":id/status")
-    updateStatus(@Param('id') id: string, @Body() updatecleaningstatus: UpdateBookingstatusDto) {
-        return this.bookingService.updateStaus(+id, updatecleaningstatus)
     }
 
     @UseGuards(JwtAuthGuard)
@@ -159,6 +153,10 @@ export class BookingController {
     }
 
 
+    @Patch('buy/:id')
+    async markBookingAsBought(@Param('id') id: string) {
+        return this.bookingService.patchBookingAsBought(id);
+    }
 }
 
 

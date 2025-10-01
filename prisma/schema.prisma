@@ -343,7 +343,7 @@ model GuestBookItems {
 
 model Orders {
   id                Int         @id @default(autoincrement())
-  User_id           Int         @unique
+  User_id           Int
   orderNumber       String      @unique
   status            OrderStatus @default(pending)
   totalAmount       Decimal     @db.Decimal(10, 2)

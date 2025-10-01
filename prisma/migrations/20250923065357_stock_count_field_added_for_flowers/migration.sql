@@ -1,3 +1,0 @@
--- AlterTable
-ALTER TABLE `Flowers` ADD COLUMN `stock_count` INTEGER NOT NULL DEFAULT 0,
-    MODIFY `image` VARCHAR(191) NULL;

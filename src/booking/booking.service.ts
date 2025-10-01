@@ -7,7 +7,7 @@ import { ChurchService } from "src/church/church.service";
 import { UpdateBookingstatusDto } from "./dto/update-booking.dto";
 import { CheckoutSessionLinkDto, BookingWithCheckoutDto, CreateBookingResponseDto } from "./dto/checkout-session-response.dto";
 import { CleaningStatus } from '@prisma/client'; // adjust import path if needed
-
+UpdateBookingstatusDto
 @Injectable()
 export class BookingService {
   constructor(private prisma: PrismaService,
@@ -169,16 +169,6 @@ export class BookingService {
     };
   }
 
-
-
-  async updateStaus(id: number, updatecleaningstatus: UpdateBookingstatusDto) {
-    return this.prisma.booking.update({
-      where: { id },
-      data: {
-        status: updatecleaningstatus.status, // ✅ now valid
-      },
-    })
-  }
 
   async getUserCheckoutLinks(
     user_id: number,
@@ -498,6 +488,50 @@ export class BookingService {
       status: HttpStatus.OK,
     };
   }
+
+
+
+
+
+
+
+  async patchBookingAsBought(booking_id: string): Promise<{ message: string }> {
+    // 1. Find the booking first
+    const booking = await this.prisma.booking.findUnique({
+      where: { booking_ids: booking_id },
+    });
+
+    if (!booking) {
+      throw new Error(`Booking with ID ${booking_id} not found`);
+    }
+
+    // 2. If it has a parent group, update all instances together
+    if (booking.bkng_parent_id) {
+      await this.prisma.booking.updateMany({
+        where: { bkng_parent_id: booking.bkng_parent_id },
+        data: {
+          is_bought: true,
+          status: 'COMPLETED',
+        },
+      });
+
+      return {
+        message: `All bookings under parent ${booking.bkng_parent_id} marked as bought`,
+      };
+    }
+
+    // 3. Otherwise just update this single booking
+    await this.prisma.booking.update({
+      where: { booking_ids: booking_id },
+      data: {
+        is_bought: true,
+        status: 'COMPLETED',
+      },
+    });
+
+    return { message: `Booking ${booking_id} marked as bought` };
+  }
+
 
 }
 

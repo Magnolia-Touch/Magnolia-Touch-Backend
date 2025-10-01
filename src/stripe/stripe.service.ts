@@ -49,11 +49,11 @@ export class StripeService {
     let shippingAddress: any | null = null;
     let billingAddress: any | null = null;
     let church: any | null = null;
+    if (billingaddressId) {
+      billingAddress = await this.prisma.billingAddress.findUnique({ where: { bill_address_id: billingaddressId } })
+    }
     if (shippingaddressId) {
       shippingAddress = await this.prisma.userAddress.findUnique({ where: { deli_address_id: shippingaddressId } })
-    }
-    else if (billingaddressId) {
-      billingAddress = await this.prisma.billingAddress.findUnique({ where: { bill_address_id: billingaddressId } })
     }
     else if (church_id) {
       church = await this.prisma.church.findUnique({ where: { church_id: church_id } })
@@ -81,7 +81,6 @@ export class StripeService {
         throw new Error('Subtotal must be greater than 0 to create a payment intent');
       }
 
-      // 3️⃣ Create PaymentIntent in Stripe
       const paymentIntent = await this.stripe.paymentIntents.create({
         amount: Math.round(subtotal * 100), // Stripe expects cents/paise
         currency,
@@ -90,11 +89,20 @@ export class StripeService {
           orderNumber: order.orderNumber,
           user_email,
           memoryProfile: `http://localhost:3000/memories?code=${memoryProfileId}`,
-          shippingaddress: shippingAddress,
-          BillingAddress: billingAddress,
-          church: church,
-        },
+          shipping_name: shippingAddress?.Name ?? '',
+          shipping_street: shippingAddress?.street ?? '',
+          shipping_city: shippingAddress?.town_or_city ?? '',
+          shipping_country: shippingAddress?.country ?? '',
+          shipping_postcode: shippingAddress?.postcode ?? '',
+          billing_name: billingAddress?.Name ?? '',
+          billing_street: billingAddress?.street ?? '',
+          billing_city: billingAddress?.town_or_city ?? '',
+          billing_country: billingAddress?.country ?? '',
+          billing_postcode: billingAddress?.postcode ?? '',
+          church_name: church?.name ?? '',
+        }
       });
+
 
       this.logger.log(
         `PaymentIntent created successfully with amount: ${subtotal} ${currency}`,
@@ -107,38 +115,38 @@ export class StripeService {
     }
   }
 
-  async createPaymentIntentforService(
-    amount: number,
-    currency: string,
-    booking_ids: string, // booking_ids from database
-    user_email: string,
-    booking_id?: number, // optional database ID for webhook processing
-  ): Promise<Stripe.PaymentIntent> {
-    try {
-      const paymentIntent = await this.stripe.paymentIntents.create({
-        amount: Math.round(amount * 100),
-        currency,
-        metadata: {
-          service_id: booking_ids,
-          ...(booking_id ? { booking_id: String(booking_id) } : {}), // ✅ fixed
-          booking_ids,
-          order_id: generateOrderIdforService(),
-          description: 'Payment for Memorial Cleaning Service',
-          user_email,
-        },
-      });
-      this.logger.log(
-        `PaymentIntent created successfully for booking ${booking_ids} with amount: ${amount} ${currency}`,
-      );
-      return paymentIntent;
-    } catch (error) {
-      this.logger.error(
-        'Failed to create PaymentIntent for service',
-        error.stack,
-      );
-      throw error;
-    }
-  }
+  // async createPaymentIntentforService(
+  //   amount: number,
+  //   currency: string,
+  //   booking_ids: string, // booking_ids from database
+  //   user_email: string,
+  //   booking_id?: number, // optional database ID for webhook processing
+  // ): Promise<Stripe.PaymentIntent> {
+  //   try {
+  //     const paymentIntent = await this.stripe.paymentIntents.create({
+  //       amount: Math.round(amount * 100),
+  //       currency,
+  //       metadata: {
+  //         service_id: booking_ids,
+  //         ...(booking_id ? { booking_id: String(booking_id) } : {}), // ✅ fixed
+  //         booking_ids,
+  //         order_id: generateOrderIdforService(),
+  //         description: 'Payment for Memorial Cleaning Service',
+  //         user_email,
+  //       },
+  //     });
+  //     this.logger.log(
+  //       `PaymentIntent created successfully for booking ${booking_ids} with amount: ${amount} ${currency}`,
+  //     );
+  //     return paymentIntent;
+  //   } catch (error) {
+  //     this.logger.error(
+  //       'Failed to create PaymentIntent for service',
+  //       error.stack,
+  //     );
+  //     throw error;
+  //   }
+  // }
 
   async createCheckoutSessionforQr(
     checkoutSessionDto: CheckoutSessionDto,

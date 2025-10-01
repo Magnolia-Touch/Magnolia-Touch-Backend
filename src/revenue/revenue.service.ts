@@ -36,7 +36,15 @@ export class RevenueService {
                 if (!startDate || !endDate) throw new Error('Date range required');
                 start = new Date(startDate);
                 end = new Date(endDate);
+
+                // Check if range exceeds 30 days
+                const diffTime = end.getTime() - start.getTime();
+                const diffDays = diffTime / (1000 * 60 * 60 * 24);
+                if (diffDays > 30) {
+                    throw new Error('Date range cannot exceed 30 days');
+                }
                 break;
+
             default: // normal → group by each month
                 start = startOfYear(now);
                 end = endOfYear(now);
