@@ -7,21 +7,34 @@ import { subMonths, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'dat
 export class RevenueUtils {
     constructor(private prisma: PrismaService) { }
 
-    // Cleaning Service Revenue
+    // Cleaning Service Revenue (unique by bkng_parent_id)
     async getCleaningServiceRevenue(start: Date, end: Date) {
-        const result = await this.prisma.booking.groupBy({
-            by: ['booking_date'],
+        // Step 1: group by parent & date
+        const grouped = await this.prisma.booking.groupBy({
+            by: ['bkng_parent_id', 'booking_date'],
             _sum: { totalAmount: true },
             where: {
                 booking_date: { gte: start, lte: end },
+                bkng_parent_id: { not: null },
             },
         });
 
-        return result.map(r => ({
-            date: r.booking_date,
-            revenue: Number(r._sum.totalAmount || 0),
+        // Step 2: collapse to unique dates
+        const revenueByDate = new Map<string, number>();
+
+        grouped.forEach(r => {
+            const dateKey = r.booking_date.toISOString().split('T')[0]; // YYYY-MM-DD
+            const current = revenueByDate.get(dateKey) || 0;
+            revenueByDate.set(dateKey, current + Number(r._sum.totalAmount || 0));
+        });
+
+        // Step 3: return as array
+        return Array.from(revenueByDate.entries()).map(([date, revenue]) => ({
+            date: new Date(date),
+            revenue,
         }));
     }
+
 
     // Memorial Revenue
     async getMemorialRevenue(start: Date, end: Date) {
