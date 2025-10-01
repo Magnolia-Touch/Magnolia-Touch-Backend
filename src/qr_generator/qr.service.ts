@@ -5,7 +5,7 @@ import { S3Service } from '../s3/s3.service';
 
 @Injectable()
 export class QrService {
-  constructor(private readonly s3Service: S3Service) {}
+  constructor(private readonly s3Service: S3Service) { }
 
   async generateAndSaveQRCode(link: string, filename: string): Promise<string> {
     try {

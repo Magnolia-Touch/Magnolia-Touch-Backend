@@ -10,7 +10,7 @@ import { Roles } from 'src/common/decoraters/roles.decorator';
 @Roles('ADMIN')
 @Controller('qr')
 export class QrController {
-  constructor(private readonly qrService: QrService) {}
+  constructor(private readonly qrService: QrService) { }
 
 
   @Post('generate')

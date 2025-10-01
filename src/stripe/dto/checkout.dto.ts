@@ -5,6 +5,7 @@ export class CheckoutDto {
     @IsInt()
     shippingaddressId: number;
 
+    @IsOptional()
     @IsInt()
     billingaddressId: number;
 

@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, Param, UseGuards, Request, Put, ParseIntPipe, Req } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, UseGuards, Request, Patch, Delete, Req } from '@nestjs/common';
 import { RolesGuard } from 'src/common/decoraters/roles.guard';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard'
 import { Roles } from 'src/common/decoraters/roles.decorator';
@@ -50,6 +50,60 @@ export class UserController {
     const user = req.user.customer_id
     return this.userservice.getActiveSubscription(user);
   }
+
+  // ---------------- Delivery Address ----------------
+  @UseGuards(JwtAuthGuard)
+  @Get('get-user-address/:deli_address_id')
+  getDeliAddrById(@Param('deli_address_id') deli_address_id: string, @Request() req) {
+    const user = req.user.customer_id;
+    return this.userservice.getDeliAddrById(Number(deli_address_id), user);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('update-user-address/:deli_address_id')
+  updateDeliAddr(
+    @Param('deli_address_id') deli_address_id: string,
+    @Body() dto: Partial<CreateUserAddressDto>,
+    @Request() req,
+  ) {
+    const user = req.user.customer_id;
+    return this.userservice.updateDeliAddr(Number(deli_address_id), dto, user);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('delete-user-address/:deli_address_id')
+  deleteDeliAddr(@Param('deli_address_id') deli_address_id: string, @Request() req) {
+    const user = req.user.customer_id;
+    return this.userservice.deleteDeliAddr(Number(deli_address_id), user);
+  }
+
+
+  // ---------------- Billing Address ----------------
+  @UseGuards(JwtAuthGuard)
+  @Get('get-bill-address/:bill_address_id')
+  getBillAddrById(@Param('bill_address_id') bill_address_id: string, @Request() req) {
+    const user = req.user.customer_id;
+    return this.userservice.getBillAddrById(Number(bill_address_id), user);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('update-bill-address/:bill_address_id')
+  updateBillAddr(
+    @Param('bill_address_id') bill_address_id: string,
+    @Body() dto: Partial<CreateBillingAddressDto>,
+    @Request() req,
+  ) {
+    const user = req.user.customer_id;
+    return this.userservice.updateBillAddr(Number(bill_address_id), dto, user);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('delete-bill-address/:bill_address_id')
+  deleteBillAddr(@Param('bill_address_id') bill_address_id: string, @Request() req) {
+    const user = req.user.customer_id;
+    return this.userservice.deleteBillAddr(Number(bill_address_id), user);
+  }
+
 
 
 
