@@ -297,45 +297,67 @@ export class WebhookService {
     paymentIntent: Stripe.PaymentIntent,
     metadata: PaymentIntentMetadata,
   ): Promise<WebhookProcessingResult> {
+    let booking: any = null;
+
+    // Case 1: booking identified by numeric id
     if (metadata.booking_id) {
       const bookingId = parseInt(metadata.booking_id);
-      await this.prisma.booking.update({
+      booking = await this.prisma.booking.findUnique({
         where: { id: bookingId },
-        data: { is_bought: true, status: 'COMPLETED' },
       });
-      return {
-        success: true,
-        message: `Booking ${bookingId} payment processed successfully`,
-        bookingId: metadata.booking_id,
-      };
     }
 
-    if (metadata.service_id || metadata.booking_id) {
-      const bookingIds = metadata.booking_id || metadata.service_id;
-      const booking = await this.prisma.booking.findFirst({
-        where: { booking_ids: bookingIds },
+    // Case 2: fallback if service_id was passed
+    if (!booking && metadata.service_id) {
+      booking = await this.prisma.booking.findFirst({
+        where: { booking_ids: metadata.service_id },
       });
+    }
 
-      if (booking) {
+    if (booking) {
+      if (booking.bkng_parent_id) {
+        // ✅ Update all bookings under this parent
+        await this.prisma.booking.updateMany({
+          where: { bkng_parent_id: booking.bkng_parent_id },
+          data: { is_bought: true, status: 'COMPLETED' },
+        });
+
+        this.logger.log(
+          `All bookings under parent ${booking.bkng_parent_id} marked as COMPLETED (payment success)`
+        );
+
+        return {
+          success: true,
+          message: `All bookings under parent ${booking.bkng_parent_id} marked as paid via payment intent`,
+          bookingId: String(booking.id),
+        };
+      } else {
+        // fallback → update just this booking
         await this.prisma.booking.update({
           where: { id: booking.id },
           data: { is_bought: true, status: 'COMPLETED' },
         });
+
         return {
           success: true,
-          message: `Booking ${booking.booking_ids} payment processed successfully`,
+          message: `Booking ${booking.booking_ids} marked as paid via payment intent`,
           bookingId: String(booking.id),
         };
-      } else {
-        this.logger.warn(`No booking found with booking_ids: ${bookingIds}`);
       }
     }
 
+    this.logger.warn(
+      `Payment intent processed but no valid booking found (metadata: ${JSON.stringify(
+        metadata,
+      )})`
+    );
+
     return {
       success: true,
-      message: 'Service payment processed but no booking identifier found',
+      message: 'Payment processed but no booking identifier found',
     };
   }
+
 
   private async clearCart(cartId: number): Promise<void> {
     try {
@@ -434,52 +456,69 @@ export class WebhookService {
     session: Stripe.Checkout.Session,
     metadata: CheckoutSessionMetadata,
   ): Promise<WebhookProcessingResult> {
-    // Handle booking by database ID
+    let booking: any = null;
+
+    // Case 1: booking identified by numeric id
     if (metadata.booking_id) {
       const bookingId = parseInt(metadata.booking_id);
-      await this.prisma.booking.update({
+      booking = await this.prisma.booking.findUnique({
         where: { id: bookingId },
-        data: { is_bought: true, status: 'COMPLETED' },
       });
-      return {
-        success: true,
-        message: `Booking ${bookingId} payment processed successfully via checkout session`,
-        bookingId: metadata.booking_id,
-      };
     }
 
-    // Handle booking by booking_ids string
-    if (metadata.service_id || metadata.booking_ids) {
+    // Case 2: booking identified by booking_ids or service_id
+    if (!booking && (metadata.booking_ids || metadata.service_id)) {
       const bookingIds = metadata.booking_ids || metadata.service_id;
-      const booking = await this.prisma.booking.findFirst({
+      booking = await this.prisma.booking.findFirst({
         where: { booking_ids: bookingIds },
       });
+    }
 
-      if (booking) {
+    if (booking) {
+      if (booking.bkng_parent_id) {
+        // ✅ Update all bookings under this parent
+        await this.prisma.booking.updateMany({
+          where: { bkng_parent_id: booking.bkng_parent_id },
+          data: { is_bought: true, status: 'COMPLETED' },
+        });
+
+        this.logger.log(
+          `All bookings under parent ${booking.bkng_parent_id} marked as COMPLETED (checkout session success)`
+        );
+
+        return {
+          success: true,
+          message: `All bookings under parent ${booking.bkng_parent_id} marked as paid via checkout session`,
+          bookingId: String(booking.id),
+          redirectTo: 'bookings',
+        };
+      } else {
+        // fallback → update single booking
         await this.prisma.booking.update({
           where: { id: booking.id },
           data: { is_bought: true, status: 'COMPLETED' },
         });
 
-        // Log successful booking payment for redirect
-        this.logger.log(`Booking payment successful - User should be redirected to bookings page for booking ID: ${booking.id}`);
-
         return {
           success: true,
-          message: `Booking ${booking.booking_ids} payment processed successfully via checkout session - redirecting to bookings`,
+          message: `Booking ${booking.booking_ids} marked as paid via checkout session`,
           bookingId: String(booking.id),
-          redirectTo: 'bookings', // Add redirect indicator
         };
-      } else {
-        this.logger.warn(`No booking found with booking_ids: ${bookingIds}`);
       }
     }
 
+    this.logger.warn(
+      `Checkout session processed but no valid booking found (metadata: ${JSON.stringify(
+        metadata,
+      )})`
+    );
+
     return {
       success: true,
-      message: 'Service checkout session processed but no booking identifier found',
+      message: 'Checkout session processed but no booking identifier found',
     };
   }
+
 
   private async checkExistingWebhookEvent(eventId: string): Promise<boolean> {
     try {

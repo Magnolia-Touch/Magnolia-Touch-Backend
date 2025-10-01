@@ -1154,30 +1154,29 @@ export class MemorialProfileService {
     const endOfDay = new Date(baseDate);
     endOfDay.setHours(23, 59, 59, 999);
 
-    // 1. Cleaning services booked on that date
-    const cleaningServiceCount = await this.prisma.booking.count({
+    // 1. Total cleaning services booked (unique by bkng_parent_id)
+    const cleaningServiceGroup = await this.prisma.booking.groupBy({
+      by: ['bkng_parent_id'],
       where: {
-        createdAt: {
-          gte: startOfDay,
-          lte: endOfDay,
-        },
+        //show only paid bookings.
+        is_bought: true,
+        bkng_parent_id: { not: null },
       },
     });
+    const cleaningServiceCount = cleaningServiceGroup.length;
 
-    // 2. Paid person profiles created on that date
-    const deadPersonProfileCount = await this.prisma.deadPersonProfile.count({
+    // 2. Total paid person profiles created (irrespective of date)
+    const deadPersonProfileCount = await this.prisma.orders.count({
       where: {
         is_paid: true,
-        createdAt: {
-          gte: startOfDay,
-          lte: endOfDay,
-        },
       },
     });
 
-    // 3. Cleaning services scheduled on that date
+
+    // 3. Cleaning services scheduled on that date (unique by bkng_parent_id)
     const todayCleaningServiceCount = await this.prisma.booking.count({
       where: {
+        is_bought: true,
         OR: [
           {
             first_cleaning_date: {
