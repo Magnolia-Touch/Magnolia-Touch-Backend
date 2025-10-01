@@ -20,6 +20,8 @@ services:
       - AWS_S3_BUCKET=${AWS_S3_BUCKET}
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
       - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
+      - MAIL_USER=${MAIL_USER}
+      - MAIL_PASS=${MAIL_PASS}
     depends_on:
       - mysql
       - redis
