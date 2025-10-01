@@ -354,7 +354,7 @@ model Orders {
   memoryProfileId   String
   is_paid           Boolean     @default(false)
   shippingAddressId Int?
-  billingAddressId  Int
+  billingAddressId  Int?
   church_id         Int?
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt

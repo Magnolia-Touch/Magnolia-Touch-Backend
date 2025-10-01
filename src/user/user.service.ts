@@ -79,4 +79,82 @@ export class UserService {
     return this.prisma.booking.findMany({ where: { User_id: user_id } })
   }
 
+  // ---------------- Delivery Address ----------------
+  async getDeliAddrById(deli_address_id: number, user_id: number) {
+    return this.prisma.userAddress.findFirst({
+      where: { deli_address_id, userCustomer_id: user_id },
+    });
+  }
+
+  // Update Delivery Address
+  async updateDeliAddr(deli_address_id: number, dto: Partial<CreateUserAddressDto>, user_id: number) {
+    const result = await this.prisma.userAddress.updateMany({
+      where: { deli_address_id, userCustomer_id: user_id },
+      data: dto,
+    });
+
+    if (result.count === 0) {
+      return { success: false, message: 'Delivery address not found or not updated' };
+    }
+
+    const updated = await this.prisma.userAddress.findFirst({
+      where: { deli_address_id, userCustomer_id: user_id },
+    });
+
+    return { success: true, message: 'Delivery address updated successfully', data: updated };
+  }
+
+
+  // Delete Delivery Address
+  async deleteDeliAddr(deli_address_id: number, user_id: number) {
+    const result = await this.prisma.userAddress.deleteMany({
+      where: { deli_address_id, userCustomer_id: user_id },
+    });
+
+    if (result.count === 0) {
+      return { success: false, message: 'Delivery address not found or already deleted' };
+    }
+
+    return { success: true, message: 'Delivery address deleted successfully' };
+  }
+
+
+
+  // ---------------- Billing Address ----------------
+  async getBillAddrById(bill_address_id: number, user_id: number) {
+    return this.prisma.billingAddress.findFirst({
+      where: { bill_address_id, userCustomer_id: user_id },
+    });
+  }
+
+  async updateBillAddr(bill_address_id: number, dto: Partial<CreateBillingAddressDto>, user_id: number) {
+    const result = await this.prisma.billingAddress.updateMany({
+      where: { bill_address_id, userCustomer_id: user_id },
+      data: dto,
+    });
+
+    if (result.count === 0) {
+      return { success: false, message: 'Billing address not found or not updated' };
+    }
+
+    const updated = await this.prisma.billingAddress.findFirst({
+      where: { bill_address_id, userCustomer_id: user_id },
+    });
+
+    return { success: true, message: 'Billing address updated successfully', data: updated };
+  }
+
+  async deleteBillAddr(bill_address_id: number, user_id: number) {
+    const result = await this.prisma.billingAddress.deleteMany({
+      where: { bill_address_id, userCustomer_id: user_id },
+    });
+
+    if (result.count === 0) {
+      return { success: false, message: 'Billing address not found or already deleted' };
+    }
+
+    return { success: true, message: 'Billing address deleted successfully' };
+  }
 }
+
+
