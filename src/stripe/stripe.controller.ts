@@ -21,7 +21,8 @@ export class StripeController {
     @Body() checkoutdto: CheckoutDto,
     @Request() req,
   ) {
-    const { email, id } = req.user;
+    const email = req.user.email
+    const id = req.user.customer_id
     return this.stripeService.createPaymentIntentforQR(
       checkoutdto,
       email,
@@ -29,32 +30,32 @@ export class StripeController {
     );
   }
 
-  @UseGuards(JwtAuthGuard)
-  @Post('create-service-payment-intent')
-  async createServicePaymentIntent(
-    @Body() serviceBookingDto: ServiceBookingDto,
-    @Request() req,
-  ) {
-    const { email } = req.user;
-    const { amount, currency, booking_id } = serviceBookingDto;
+  // @UseGuards(JwtAuthGuard)
+  // @Post('create-service-payment-intent')
+  // async createServicePaymentIntent(
+  //   @Body() serviceBookingDto: ServiceBookingDto,
+  //   @Request() req,
+  // ) {
+  //   const { email } = req.user;
+  //   const { amount, currency, booking_id } = serviceBookingDto;
 
-    // Get booking details to generate booking_ids
-    const booking = await this.prisma.booking.findUnique({
-      where: { id: booking_id }
-    });
+  //   // Get booking details to generate booking_ids
+  //   const booking = await this.prisma.booking.findUnique({
+  //     where: { id: booking_id }
+  //   });
 
-    if (!booking) {
-      throw new Error('Booking not found');
-    }
+  //   if (!booking) {
+  //     throw new Error('Booking not found');
+  //   }
 
-    return this.stripeService.createPaymentIntentforService(
-      amount,
-      currency,
-      booking.booking_ids,
-      email,
-      booking_id,
-    );
-  }
+  //   return this.stripeService.createPaymentIntentforService(
+  //     amount,
+  //     currency,
+  //     booking.booking_ids,
+  //     email,
+  //     booking_id,
+  //   );
+  // }
 
   @UseGuards(JwtAuthGuard)
   @Post('create-checkout-session')

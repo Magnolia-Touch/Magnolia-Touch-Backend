@@ -6,6 +6,10 @@ CREATE TABLE `User` (
     `Phone` VARCHAR(191) NOT NULL,
     `password` VARCHAR(191) NOT NULL,
     `role` ENUM('USER', 'ADMIN', 'DELIVERY') NOT NULL DEFAULT 'USER',
+    `resetOtp` VARCHAR(191) NULL DEFAULT '0',
+    `resetOtpExpiresAt` DATETIME(3) NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
 
     UNIQUE INDEX `User_email_key`(`email`),
     PRIMARY KEY (`customer_id`)
@@ -21,6 +25,8 @@ CREATE TABLE `UserAddress` (
     `postcode` VARCHAR(191) NOT NULL,
     `phone` VARCHAR(191) NOT NULL,
     `email` VARCHAR(191) NOT NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
     `userCustomer_id` INTEGER NULL,
 
     PRIMARY KEY (`deli_address_id`)
@@ -37,6 +43,8 @@ CREATE TABLE `BillingAddress` (
     `phone` VARCHAR(191) NOT NULL,
     `email` VARCHAR(191) NOT NULL,
     `userCustomer_id` INTEGER NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
 
     PRIMARY KEY (`bill_address_id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -50,6 +58,8 @@ CREATE TABLE `Products` (
     `short_Description` TEXT NOT NULL,
     `detailed_description` TEXT NULL,
     `company_guarantee` TEXT NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
 
     PRIMARY KEY (`product_id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -61,6 +71,8 @@ CREATE TABLE `Services` (
     `name` VARCHAR(191) NOT NULL,
     `discription` VARCHAR(191) NOT NULL,
     `features` VARCHAR(191) NOT NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
 
     PRIMARY KEY (`services_id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -83,6 +95,8 @@ CREATE TABLE `CartItem` (
     `productId` INTEGER NOT NULL,
     `quantity` INTEGER NOT NULL,
     `price` DOUBLE NOT NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
 
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -92,6 +106,8 @@ CREATE TABLE `ProductDimension` (
     `dimension_id` INTEGER NOT NULL AUTO_INCREMENT,
     `dimension` VARCHAR(191) NOT NULL,
     `productsProduct_id` INTEGER NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
 
     PRIMARY KEY (`dimension_id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -103,6 +119,9 @@ CREATE TABLE `SubscriptionPlan` (
     `Subscription_name` VARCHAR(191) NOT NULL,
     `Frequency` INTEGER NOT NULL,
     `Price` VARCHAR(191) NOT NULL,
+    `isSubscriptionPlan` BOOLEAN NOT NULL DEFAULT false,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
 
     PRIMARY KEY (`Subscription_id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -110,11 +129,14 @@ CREATE TABLE `SubscriptionPlan` (
 -- CreateTable
 CREATE TABLE `Flowers` (
     `flower_id` INTEGER NOT NULL AUTO_INCREMENT,
-    `image` VARCHAR(191) NOT NULL,
+    `image` VARCHAR(191) NULL,
     `Name` VARCHAR(191) NOT NULL,
     `Price` VARCHAR(191) NOT NULL,
     `Description` VARCHAR(191) NULL,
+    `stock_count` INTEGER NOT NULL DEFAULT 0,
     `in_stock` BOOLEAN NOT NULL DEFAULT false,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
 
     PRIMARY KEY (`flower_id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -127,6 +149,8 @@ CREATE TABLE `Church` (
     `state` VARCHAR(191) NOT NULL,
     `church_address` VARCHAR(191) NULL,
     `userCustomer_id` INTEGER NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
 
     PRIMARY KEY (`church_id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -134,12 +158,13 @@ CREATE TABLE `Church` (
 -- CreateTable
 CREATE TABLE `Booking` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `bkng_parent_id` VARCHAR(191) NULL,
     `booking_ids` VARCHAR(191) NOT NULL,
     `name_on_memorial` VARCHAR(191) NOT NULL,
     `plot_no` VARCHAR(191) NULL,
     `User_id` INTEGER NOT NULL,
     `church_id` INTEGER NOT NULL,
-    `Subscription_id` INTEGER NOT NULL,
+    `Subscription_id` INTEGER NULL,
     `amount` INTEGER NOT NULL DEFAULT 0,
     `first_cleaning_date` DATETIME(3) NOT NULL,
     `second_cleaning_date` DATETIME(3) NULL,
@@ -147,8 +172,11 @@ CREATE TABLE `Booking` (
     `Flower_id` INTEGER NULL,
     `booking_date` DATETIME(3) NOT NULL,
     `anniversary_date` DATETIME(3) NULL,
-    `status` ENUM('pending', 'confirmed', 'cleaned') NOT NULL DEFAULT 'pending',
+    `status` ENUM('PENDING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED') NOT NULL DEFAULT 'PENDING',
     `is_bought` BOOLEAN NOT NULL DEFAULT false,
+    `totalAmount` DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
 
     UNIQUE INDEX `Booking_booking_ids_key`(`booking_ids`),
     PRIMARY KEY (`id`)
@@ -160,6 +188,8 @@ CREATE TABLE `Reviews` (
     `User_Id` INTEGER NOT NULL,
     `Review_Description` VARCHAR(191) NOT NULL,
     `Rating` INTEGER NOT NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
 
     PRIMARY KEY (`Review_id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -177,6 +207,8 @@ CREATE TABLE `DeadPersonProfile` (
     `memorial_place` VARCHAR(191) NULL,
     `is_paid` BOOLEAN NOT NULL DEFAULT false,
     `slug` VARCHAR(191) NOT NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
 
     UNIQUE INDEX `DeadPersonProfile_slug_key`(`slug`),
     PRIMARY KEY (`profile_id`)
@@ -185,7 +217,7 @@ CREATE TABLE `DeadPersonProfile` (
 -- CreateTable
 CREATE TABLE `SocialLinks` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
-    `socialMediaName` ENUM('FACEBOOK', 'INSTAGRAM', 'TWITTER', 'YOUTUBE') NULL,
+    `socialMediaName` VARCHAR(191) NULL,
     `link` VARCHAR(191) NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
@@ -209,7 +241,9 @@ CREATE TABLE `Events` (
 -- CreateTable
 CREATE TABLE `Biography` (
     `biography_id` INTEGER NOT NULL AUTO_INCREMENT,
-    `discription` VARCHAR(191) NOT NULL,
+    `discription` TEXT NOT NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
     `deadPersonProfiles` VARCHAR(191) NOT NULL,
 
     PRIMARY KEY (`biography_id`)
@@ -219,6 +253,8 @@ CREATE TABLE `Biography` (
 CREATE TABLE `Gallery` (
     `gallery_id` INTEGER NOT NULL AUTO_INCREMENT,
     `link` VARCHAR(191) NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
     `deadPersonProfiles` VARCHAR(191) NOT NULL,
 
     PRIMARY KEY (`gallery_id`)
@@ -227,8 +263,10 @@ CREATE TABLE `Gallery` (
 -- CreateTable
 CREATE TABLE `Family` (
     `family_id` INTEGER NOT NULL AUTO_INCREMENT,
-    `relationship` ENUM('Parents', 'Siblings', 'Cousins', 'Friends', 'Spouse', 'NieceAndNephew', 'Childrens', 'Pets', 'GrandChildrens', 'GrandParents', 'GreatGrandParents') NOT NULL,
+    `relationship` VARCHAR(191) NOT NULL,
     `name` VARCHAR(191) NOT NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
     `deadPersonProfiles` VARCHAR(191) NOT NULL,
 
     PRIMARY KEY (`family_id`)
@@ -238,6 +276,8 @@ CREATE TABLE `Family` (
 CREATE TABLE `GuestBook` (
     `guestbook_id` INTEGER NOT NULL AUTO_INCREMENT,
     `deadPersonProfiles` VARCHAR(191) NOT NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
 
     PRIMARY KEY (`guestbook_id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -250,10 +290,12 @@ CREATE TABLE `GuestBookItems` (
     `last_name` VARCHAR(191) NULL,
     `email` VARCHAR(191) NULL,
     `phone` VARCHAR(191) NULL,
-    `message` VARCHAR(191) NOT NULL,
+    `message` TEXT NOT NULL,
     `photo_upload` VARCHAR(191) NULL,
     `date` VARCHAR(191) NOT NULL,
     `is_approved` BOOLEAN NOT NULL DEFAULT false,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
 
     PRIMARY KEY (`guestbookitems_id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -280,7 +322,6 @@ CREATE TABLE `orders` (
     `delivery_agent_id` INTEGER NULL,
     `deliveryAgentProfileId` INTEGER NULL,
 
-    UNIQUE INDEX `orders_User_id_key`(`User_id`),
     UNIQUE INDEX `orders_orderNumber_key`(`orderNumber`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -289,6 +330,8 @@ CREATE TABLE `orders` (
 CREATE TABLE `DeliveryAgentProfile` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `deliveryagent_id` INTEGER NOT NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
 
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -321,7 +364,7 @@ ALTER TABLE `Booking` ADD CONSTRAINT `Booking_User_id_fkey` FOREIGN KEY (`User_i
 ALTER TABLE `Booking` ADD CONSTRAINT `Booking_church_id_fkey` FOREIGN KEY (`church_id`) REFERENCES `Church`(`church_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `Booking` ADD CONSTRAINT `Booking_Subscription_id_fkey` FOREIGN KEY (`Subscription_id`) REFERENCES `SubscriptionPlan`(`Subscription_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `Booking` ADD CONSTRAINT `Booking_Subscription_id_fkey` FOREIGN KEY (`Subscription_id`) REFERENCES `SubscriptionPlan`(`Subscription_id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `Booking` ADD CONSTRAINT `Booking_Flower_id_fkey` FOREIGN KEY (`Flower_id`) REFERENCES `Flowers`(`flower_id`) ON DELETE SET NULL ON UPDATE CASCADE;

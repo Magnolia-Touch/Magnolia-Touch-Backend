@@ -220,4 +220,14 @@ export class OrdersService {
   }
 
 
+  async markOrderAsPaid(id: number) {
+    return this.prisma.orders.update({
+      where: { id },   // match numeric primary key
+      data: { is_paid: true },
+    });
+  }
+
+
+
+
 }
