@@ -80,17 +80,7 @@ jobs:
               nestjs-app
 
             echo '🧹 Cleaning up unused data...'
-
+            docker system prune -af --volumes
             echo '✅ Deployment complete!'
           "
 
-  cleanup:
-    needs: [deploy-production]
-    runs-on: ubuntu-latest
-    if: always()
-
-    steps:
-      - name: Cleanup old images
-        run: |
-          echo "Cleaning up old container images..."
-          docker system prune -af --volumes
