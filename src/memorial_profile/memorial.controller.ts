@@ -39,6 +39,8 @@ export class MemorialController {
       gallery?: Express.Multer.File[];
     },
     @Body() body: any,
+    @Body('successUrl') successUrl: string,
+    @Body('cancelUrl') cancelUrl: string,
     @Request() req,
   ) {
     // ─── Validate and Upload profile_image ──────────────────────────────
@@ -96,7 +98,8 @@ export class MemorialController {
       gallery: galleryUrls,
     };
 
-    return this.deadPersonProfileService.create(dto, req.user.email);
+    return this.deadPersonProfileService.create(dto, req.user.email, req.user.customer_id, successUrl,
+      cancelUrl);
   }
 
   @Get('')

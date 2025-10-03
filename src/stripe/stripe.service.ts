@@ -363,4 +363,71 @@ export class StripeService {
       throw error;
     }
   }
+
+
+
+
+
+
+
+
+
+  async createCheckoutLinkForExistingOrder(
+    order: any,
+    user_email: string,
+    successUrl: string,
+    cancelUrl: string,
+  ): Promise<Stripe.Checkout.Session> {
+    try {
+      // Convert Prisma Decimal/string to number
+      const unitAmount = Math.round(Number(order.totalAmount) * 100);
+
+      if (isNaN(unitAmount)) {
+        throw new Error(`Invalid unit_amount: ${order.totalAmount}`);
+      }
+
+      const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] = [
+        {
+          price_data: {
+            currency: 'usd', // or dynamic if you need
+            product_data: {
+              name: 'Memorial Profile QR Code',
+              description: `Order ${order.orderNumber}`,
+            },
+            unit_amount: unitAmount,
+          },
+          quantity: 1,
+        },
+      ];
+
+      const session = await this.stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items,
+        mode: 'payment',
+        success_url: `${successUrl}?session_id={CHECKOUT_SESSION_ID}&order_id=${order.id}`,
+        cancel_url: `${cancelUrl}?order_id=${order.id}`,
+        customer_email: user_email,
+        metadata: {
+          order_id: String(order.id),
+          orderNumber: order.orderNumber,
+          booking_ids: order.booking_ids ?? '',
+          description: 'Payment for Ordering Memorial Profile QR Code',
+          user_email,
+        },
+      });
+
+      this.logger.log(
+        `Checkout Session created for order ${order.orderNumber} with amount: ${unitAmount} cents`,
+      );
+
+      return session;
+    } catch (error) {
+      this.logger.error(
+        'Failed to create Checkout Session for existing order',
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
 }

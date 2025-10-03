@@ -9,16 +9,47 @@ import { HttpStatus } from '@nestjs/common';
 import { CreateProfileDto } from './dto/create-profile.dto';
 import { contains } from 'class-validator';
 import { MailerService } from '@nestjs-modules/mailer';
+import { StripeService } from 'src/stripe/stripe.service';
+import {
+  generateOrderIdforProduct,
+} from 'src/utils/code-generator.util';
+import { OrdersService } from 'src/orders/orders.service';
+
+import { Logger } from '@nestjs/common';
 
 @Injectable()
 export class MemorialProfileService {
+  private readonly logger = new Logger(MemorialProfileService.name);
+
   constructor(
     private prisma: PrismaService,
     private s3Service: S3Service,
-    private emailService: MailerService
+    private emailService: MailerService,
+    private stripeService: StripeService,
+    private readonly orderservice: OrdersService,
   ) { }
+  private ensureHttpsUrl(url: string): string {
+    if (!url) return url;
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    return `https://${url}`;
+  }
 
-  async create(dto: CreateProfileDto, email: string) {
+  private getDefaultUrl(path: string): string {
+    const frontendUrl = process.env.FRONTEND_URL;
+    if (!frontendUrl) {
+      throw new Error('FRONTEND_URL environment variable is not set');
+    }
+    const baseUrl = this.ensureHttpsUrl(frontendUrl);
+    return `${baseUrl}${path}`;
+  }
+
+  async create(dto: CreateProfileDto,
+    email: string,
+    user_id: number,
+    successUrl?: string,
+    cancelUrl?: string) {
     // generate unique slug
     let uniqueSlug = '';
     let isUnique = false;
@@ -91,8 +122,92 @@ export class MemorialProfileService {
         Events: true,
       },
     });
+    let subtotal = 100;
+    let product: any | null = null;
+    //setup payment urls
+    let shippingAddress: any | null = null;
+    let billingAddress: any | null = null;
+    let church: any | null = null;
+    if (dto.billingaddressId) {
+      billingAddress = await this.prisma.billingAddress.findUnique({ where: { bill_address_id: Number(dto.billingaddressId) } })
+    }
+    if (dto.shippingaddressId) {
+      shippingAddress = await this.prisma.userAddress.findUnique({ where: { deli_address_id: Number(dto.shippingaddressId) } })
+    }
+    else if (dto.church_id) {
+      church = await this.prisma.church.findUnique({ where: { church_id: Number(dto.church_id) } })
+    }
 
-    return profile;
+    let OrderCreated: any;
+    try {
+      //hardcode for demo
+      subtotal = product ? Number(product.price) : 100; // fallback ₹100 / $1.00
+      // 2️⃣ Ensure subtotal > 0
+
+      // 1️⃣ Create Order in DB
+      const order = await this.orderservice.create({
+        User_id: user_id,
+        orderNumber: generateOrderIdforProduct(),
+        status: 'pending',
+        totalAmount: subtotal,
+        shippingAddressId: Number(dto.shippingaddressId) ?? null,
+        billingAddressId: Number(dto.billingaddressId) ?? null,
+        church_id: Number(dto.church_id) ?? null,
+        memoryProfileId: profile.slug,
+        tracking_details: undefined,
+        delivery_agent_id: undefined,
+      });
+      if (subtotal <= 0) {
+        throw new Error('Subtotal must be greater than 0 to create a payment intent');
+      }
+
+
+      const checkoutSession = await this.stripeService.createCheckoutLinkForExistingOrder(
+        order,
+        email,
+        successUrl || this.getDefaultUrl('/booking/success'),
+        cancelUrl || this.getDefaultUrl('/booking/cancel')
+      );
+
+      OrderCreated = {
+        id: order.id,
+        orderNumber: order.orderNumber,
+        memoryProfile: `http://localhost:3000/memories?code=${profile.slug}`,
+        shipping_name: shippingAddress?.Name ?? '',
+        shipping_street: shippingAddress?.street ?? '',
+        shipping_city: shippingAddress?.town_or_city ?? '',
+        shipping_country: shippingAddress?.country ?? '',
+        shipping_postcode: shippingAddress?.postcode ?? '',
+        billing_name: billingAddress?.Name ?? '',
+        billing_street: billingAddress?.street ?? '',
+        billing_city: billingAddress?.town_or_city ?? '',
+        billing_country: billingAddress?.country ?? '',
+        billing_postcode: billingAddress?.postcode ?? '',
+        church_name: church?.name ?? '',
+        church_city: church?.city ?? '',
+        church_state: church?.state ?? '',
+        church_address: church?.address ?? '',
+        amount: order.totalAmount,
+        status: order.status,
+        is_bought: order.is_paid,
+        checkout_url: checkoutSession.url!,
+        session_id: checkoutSession.id,
+        payment_status: checkoutSession.payment_status || 'pending',
+        expires_at: checkoutSession.expires_at
+          ? new Date(checkoutSession.expires_at * 1000).toISOString()
+          : undefined,
+      };
+    } catch (error) {
+      this.logger.error('Failed to create PaymentIntent', error.stack);
+      throw error;
+    }
+    // Return response only for the first booking
+    return {
+      message: `Order created successfully with checkout link (Created ${OrderCreated.orderNumber} order internally)`,
+      booking: OrderCreated, profile,
+      status: HttpStatus.OK,
+    };
+
   }
 
 
