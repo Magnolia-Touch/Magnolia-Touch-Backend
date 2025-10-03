@@ -7,7 +7,7 @@ import { S3Service } from '../s3/s3.service';
 export class QrService {
   constructor(private readonly s3Service: S3Service) { }
 
-  async generateAndSaveQRCode(link: string, filename: string): Promise<string> {
+  async generateAndSaveQRCode(link: string, filename: string): Promise<{ url: string }> {
     try {
       const qrBuffer = await QRCode.toBuffer(link);
 
@@ -19,7 +19,8 @@ export class QrService {
         'qr-codes'
       );
 
-      return s3Url;
+      // Return JSON instead of plain string
+      return { url: s3Url };
     } catch (error) {
       throw new Error(`Failed to generate and upload QR code: ${error.message}`);
     }
