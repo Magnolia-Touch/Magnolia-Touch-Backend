@@ -135,4 +135,26 @@ export class S3Service {
   validateFileSize(file: Express.Multer.File, maxSizeInBytes: number): boolean {
     return file.size <= maxSizeInBytes;
   }
+
+
+  async fileExists(key: string): Promise<boolean> {
+    try {
+      const command = new GetObjectCommand({
+        Bucket: this.bucketName,
+        Key: key,
+      });
+      await this.s3Client.send(command);
+      return true;
+    } catch (err: any) {
+      if (err.name === 'NoSuchKey' || err.$metadata?.httpStatusCode === 404) {
+        return false;
+      }
+      throw err;
+    }
+  }
+
+  getPublicUrl(key: string): string {
+    const region = this.configService.get<string>('AWS_REGION');
+    return `https://${this.bucketName}.s3.${region}.amazonaws.com/${key}`;
+  }
 }

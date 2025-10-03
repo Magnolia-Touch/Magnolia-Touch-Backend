@@ -5,7 +5,7 @@ import {
     IsBoolean,
     IsArray,
     ValidateNested,
-    IsEnum,
+    IsInt,
     isString,
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -143,4 +143,22 @@ export class CreateProfileDto {
     @ValidateNested({ each: true })
     @Type(() => EventDto)
     events?: EventDto[];
+
+    @IsOptional()
+    @IsInt()
+    @Type(() => Number) // 👈 transforms "123" → 123
+    shippingaddressId: number;
+
+    @IsOptional()
+    @IsInt()
+    @Type(() => Number) // 👈 transforms "123" → 123
+    billingaddressId: number;
+
+    @IsOptional()
+    @IsInt()
+    @Type(() => Number) // 👈 transforms "123" → 123
+    church_id: number;
+
+    @IsString()
+    currency: string;
 }

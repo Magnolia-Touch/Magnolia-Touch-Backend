@@ -1,5 +1,5 @@
 // src/qr/qr.controller.ts
-import { Controller, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Query, Get } from '@nestjs/common';
 import { QrService } from './qr.service';
 import { RolesGuard } from 'src/common/decoraters/roles.guard';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard'
@@ -17,5 +17,14 @@ export class QrController {
   async saveQrCode(@Body() body: { link: string; filename: string }) {
     const { link, filename } = body;
     return this.qrService.generateAndSaveQRCode(link, filename);
+  }
+
+  // GET /qr/check?slug=abc123
+  @Get('check')
+  async checkQRCode(@Query('slug') slug: string) {
+    if (!slug) {
+      return { exists: false, message: 'Slug is required' };
+    }
+    return this.qrService.checkQRCodeExists(slug);
   }
 }

@@ -13,7 +13,7 @@ async function bootstrap() {
     credentials: true,
   });
 
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true }))
+  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   app.use('/stripe/webhook', bodyParser.raw({ type: 'application/json' }));
   app.use(bodyParser.json());
 
