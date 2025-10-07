@@ -21,6 +21,7 @@ import { MailerModule } from '@nestjs-modules/mailer';
 import { PugAdapter } from '@nestjs-modules/mailer/dist/adapters/pug.adapter';
 import { join } from 'path';
 import { RevenueModule } from './revenue/revenue.module';
+import { ContactFormModule } from './contact-form/contact-form.module';
 
 @Module({
   imports: [ConfigModule.forRoot({
@@ -64,6 +65,7 @@ import { RevenueModule } from './revenue/revenue.module';
     LogicModule,
     OrdersModule,
     RevenueModule,
+    ContactFormModule,
   StripeModule.forRootAsync()],
   controllers: [AppController],
   providers: [AppService],
