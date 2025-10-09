@@ -253,6 +253,7 @@ export class AuthService {
         const user = await this.prisma.user.findUnique({
             where: { customer_id: userId },
             select: {
+                customer_id: true,
                 customer_name: true,
                 email: true,
                 Phone: true,
@@ -433,6 +434,7 @@ export class AuthService {
         const user = await this.prisma.user.findUnique({
             where: { customer_id: id },
             select: {
+                customer_id: true,
                 customer_name: true,
                 email: true,
                 Phone: true,

@@ -27,29 +27,15 @@ export class OrdersController {
   ) {
     const pageNum = parseInt(page || '1', 10);
     const limitNum = parseInt(limit || '10', 10);
-    return this.ordersService.findAll(req.user.id, pageNum, limitNum);
+    return this.ordersService.findAll(req.user.customer_id, pageNum, limitNum);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get('my-orders/:id')
-  async getMyOrderById(@Req() req, @Param('id') id: string) {
-    return this.ordersService.findOne(parseInt(id, 10), req.user.id);
+  async getMyOrderById(@Req() req, @Param('order_number') order_number: string) {
+    return this.ordersService.findOne(order_number, req.user.id);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateOrderDto: UpdateOrderDto) {
-    return this.ordersService.update(+id, updateOrderDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.ordersService.remove(+id);
-  }
-
-  @Patch(":id/status")
-  updateStatus(@Param('id') id: string, @Body() updatestatusdto: UpdateOrderStatusDto) {
-    return this.ordersService.updateStatus(+id, updatestatusdto)
-  }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
@@ -67,8 +53,8 @@ export class OrdersController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
   @Get('all-orders/:id')
-  async getMyOrderByIdByAdmin(@Req() req, @Param('id') id: string) {
-    return this.ordersService.findOneByAdmin(parseInt(id, 10));
+  async getMyOrderByIdByAdmin(@Req() req, @Param('order_number') order_number: string) {
+    return this.ordersService.findOneByAdmin(order_number);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -106,6 +92,22 @@ export class OrdersController {
   @Patch(':id/mark-paid')
   async markAsPaid(@Param('id', ParseIntPipe) id: number) {
     return this.ordersService.markOrderAsPaid(id);
+  }
+
+
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() updateOrderDto: UpdateOrderDto) {
+    return this.ordersService.update(id, updateOrderDto);
+  }
+
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.ordersService.remove(id);
+  }
+
+  @Patch(":order_number/status")
+  updateStatus(@Param('order_number') order_number: string, @Body() updatestatusdto: UpdateOrderStatusDto) {
+    return this.ordersService.updateStatus(order_number, updatestatusdto)
   }
 
 
