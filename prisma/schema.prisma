@@ -51,6 +51,7 @@ model User {
   role              Role      @default(USER)
   resetOtp          String?   @default("0") // string default
   resetOtpExpiresAt DateTime? @default(now()) // set to current time
+  is_active         Boolean   @default(true)
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 

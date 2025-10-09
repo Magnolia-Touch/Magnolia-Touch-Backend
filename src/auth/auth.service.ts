@@ -12,6 +12,7 @@ import * as nodemailer from 'nodemailer';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { MailerService } from '@nestjs-modules/mailer';
+import { use } from 'passport';
 
 @Injectable()
 export class AuthService {
@@ -181,14 +182,36 @@ export class AuthService {
                 skip,
                 take: limit,
                 select: {
+                    customer_id: true,
                     customer_name: true,
                     email: true,
                     Phone: true,
-                    deadPersonProfiles: true,
+                    role: true,
+                    is_active: true,
+                    createdAt: true,
+                    updatedAt: true,
+                    deadPersonProfiles: {
+                        select: {
+                            firstName: true,
+                            lastName: true,
+                            profile_image: true,
+                            born_date: true,
+                            death_date: true,
+                            memorial_place: true,
+                            slug: true,
+                        }
+                    },
                     Booking: {
                         select: {
                             booking_ids: true,
                             name_on_memorial: true,
+                            amount: true,
+                            first_cleaning_date: true,
+                            second_cleaning_date: true,
+                            booking_date: true,
+                            anniversary_date: true,
+                            no_of_subscription_years: true,
+                            status: true,
                             subscription: { select: { Subscription_name: true } },
                         },
                     },
@@ -230,9 +253,14 @@ export class AuthService {
         const user = await this.prisma.user.findUnique({
             where: { customer_id: userId },
             select: {
+                customer_id: true,
                 customer_name: true,
                 email: true,
                 Phone: true,
+                role: true,
+                is_active: true,
+                createdAt: true,
+                updatedAt: true,
                 Booking: {
                     select: {
                         booking_ids: true,
@@ -271,6 +299,7 @@ export class AuthService {
                         born_date: true,
                         death_date: true,
                         memorial_place: true,
+                        slug: true,
                     }
                 }
             }
@@ -296,11 +325,38 @@ export class AuthService {
         if (!user) {
             throw new NotFoundException(`User with ID ${id} not found`);
         }
-        let updateData = { ...data };
-        return this.prisma.user.update({
+        let updateData = { customer_name: data.customer_name, Phone: data.Phone };
+        const updatedUser = await this.prisma.user.update({
             where: { customer_id: id },
             data: updateData,
         });
+        //need to exclude password from returned user object
+        const { password, resetOtp, resetOtpExpiresAt, ...result } = updatedUser;
+        return {
+            message: 'User updated successfully',
+            data: result,
+            status: HttpStatus.OK,
+        };
+    }
+
+    async updateUserActiveStatus(id: number, isActive: boolean) {
+        const user = await this.prisma.user.findUnique({
+            where: { customer_id: id },
+        });
+        if (!user) {
+            throw new NotFoundException(`User with ID ${id} not found`);
+        }
+        const updatedUser = await this.prisma.user.update({
+            where: { customer_id: id },
+            data: { is_active: isActive }
+        });
+        //need to exclude password from returned user object
+        const { password, resetOtp, resetOtpExpiresAt, ...result } = updatedUser;
+        return {
+            message: 'User active status updated successfully',
+            data: result,
+            status: HttpStatus.OK,
+        };
     }
 
 
@@ -373,5 +429,214 @@ export class AuthService {
 
         return { message: 'Password reset successful' };
     }
+
+    async getUsersbyId(id: number) {
+        const user = await this.prisma.user.findUnique({
+            where: { customer_id: id },
+            select: {
+                customer_id: true,
+                customer_name: true,
+                email: true,
+                Phone: true,
+                role: true,
+                is_active: true,
+                createdAt: true,
+                updatedAt: true,
+                Booking: {
+                    select: {
+                        booking_ids: true,
+                        name_on_memorial: true,
+                        plot_no: true,
+                        amount: true,
+                        first_cleaning_date: true,
+                        second_cleaning_date: true,
+                        booking_date: true,
+                        anniversary_date: true,
+                        no_of_subscription_years: true,
+                        status: true,
+                        Church: {
+                            select: {
+                                church_name: true,
+                            },
+                        },
+                        flower: {
+                            select: {
+                                Name: true
+                            }
+                        },
+                        subscription: {
+                            select: {
+                                Subscription_name: true,
+                                Price: true,
+                            }
+                        }
+                    }
+                },
+                deadPersonProfiles: {
+                    select: {
+                        firstName: true,
+                        lastName: true,
+                        profile_image: true,
+                        born_date: true,
+                        death_date: true,
+                        memorial_place: true,
+                        slug: true,
+                        biography: true,
+                        gallery: true,
+                        family: true,
+                        guestBook: true,
+                        SocialLinks: true,
+                        Events: true,
+
+                    },
+                }
+            }
+        });
+
+        if (!user) {
+            throw new UnauthorizedException('User not found');
+        }
+
+        return {
+            message: 'User profile fetched successfully',
+            data: user,
+            status: HttpStatus.OK,
+        };
+    }
+
+    async getAllBookingsOfUsers(id: number) {
+        const bookings = await this.prisma.booking.findMany({
+            where: { User_id: id },
+            select: {
+                booking_ids: true,
+                name_on_memorial: true,
+                plot_no: true,
+                amount: true,
+                first_cleaning_date: true,
+                second_cleaning_date: true,
+                booking_date: true,
+                anniversary_date: true,
+                no_of_subscription_years: true,
+                status: true,
+                Church: {
+                    select: {
+                        church_name: true,
+                    },
+                },
+                flower: {
+                    select: {
+                        Name: true
+                    }
+                },
+                subscription: {
+                    select: {
+                        Subscription_name: true,
+                        Price: true,
+                    }
+                }
+            }
+        })
+
+        return {
+            data: bookings
+        }
+    }
+
+    async getAllMemorialProfilesOfUsers(id: number) {
+        const user = await this.prisma.user.findUnique({
+            where: { customer_id: id }
+        })
+        const memorialProfiles = await this.prisma.deadPersonProfile.findMany({
+            where: { owner_id: user?.email },
+            select: {
+                firstName: true,
+                lastName: true,
+                profile_image: true,
+                born_date: true,
+                death_date: true,
+                memorial_place: true,
+                slug: true,
+                biography: true,
+                gallery: true,
+                family: true,
+                guestBook: true,
+                SocialLinks: true,
+                Events: true,
+
+            },
+        })
+        return {
+            data: memorialProfiles
+        }
+    }
+
+
+    async getEachBookingsOfUsers(id: number, booking_id: string) {
+        const bookings = await this.prisma.booking.findUnique({
+            where: { User_id: id, booking_ids: booking_id },
+            select: {
+                booking_ids: true,
+                name_on_memorial: true,
+                plot_no: true,
+                amount: true,
+                first_cleaning_date: true,
+                second_cleaning_date: true,
+                booking_date: true,
+                anniversary_date: true,
+                no_of_subscription_years: true,
+                status: true,
+                Church: {
+                    select: {
+                        church_name: true,
+                    },
+                },
+                flower: {
+                    select: {
+                        Name: true
+                    }
+                },
+                subscription: {
+                    select: {
+                        Subscription_name: true,
+                        Price: true,
+                    }
+                }
+            }
+        })
+
+        return {
+            data: bookings
+        }
+    }
+
+    async getEachMemorialProfilesOfUsers(id: number, slug: string) {
+        const user = await this.prisma.user.findUnique({
+            where: { customer_id: id }
+        })
+        const memorialProfiles = await this.prisma.deadPersonProfile.findMany({
+            where: { owner_id: user?.email, slug: slug },
+            select: {
+                firstName: true,
+                lastName: true,
+                profile_image: true,
+                born_date: true,
+                death_date: true,
+                memorial_place: true,
+                slug: true,
+                biography: true,
+                gallery: true,
+                family: true,
+                guestBook: true,
+                SocialLinks: true,
+                Events: true,
+
+            },
+        })
+        return {
+            data: memorialProfiles
+        }
+    }
+
+
 
 }

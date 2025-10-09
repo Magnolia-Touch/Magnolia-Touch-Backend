@@ -359,35 +359,59 @@ export class BookingService {
     };
   }
 
-  //Admin only API
   async getUserBookingStatusByAdmin(page = 1, limit = 10) {
     const skip = (page - 1) * limit;
 
     const [bookings, total] = await this.prisma.$transaction([
       this.prisma.booking.findMany({
         select: {
-          user: {
-            select: { email: true }
-          },
+          id: true,
           booking_ids: true,
           name_on_memorial: true,
           first_cleaning_date: true,
           second_cleaning_date: true,
           status: true,
           createdAt: true,
+          Flower_id: true, // ✅ needed to check if flower included
+          user: {
+            select: {
+              customer_id: true,
+              customer_name: true,
+              Phone: true,
+              email: true,
+            },
+          },
+          subscription: {
+            select: {
+              Subscription_name: true,
+              isSubscriptionPlan: true,
+              Price: true,
+            },
+          },
         },
-        orderBy: { createdAt: 'desc' }, // latest first
+        orderBy: { createdAt: 'desc' },
         skip,
         take: limit,
       }),
       this.prisma.booking.count(),
     ]);
+
     if (!bookings || bookings.length === 0) {
-      throw new NotFoundException('No bookings found for this user');
+      throw new NotFoundException('No bookings found');
     }
+
+    // ✅ Add flowerIncluded flag dynamically
+    const bookingsWithFlowerFlag = bookings.map((booking) => ({
+      ...booking,
+      flowerIncluded: booking.Flower_id !== null, // true if Flower_id exists
+    }));
+
+    // ✅ Optionally remove Flower_id from response
+    const sanitizedBookings = bookingsWithFlowerFlag.map(({ Flower_id, ...rest }) => rest);
+
     return {
       message: 'User bookings fetched successfully',
-      data: bookings,
+      data: sanitizedBookings,
       meta: {
         total,
         page,
@@ -399,21 +423,47 @@ export class BookingService {
   }
 
 
+
   //Admin only API
   // USER: Check single booking status by booking id
   async getBookingStatusByBookingIdByAdmin(userId: number, bookingId: string) {
     const booking = await this.prisma.booking.findUnique({
       where: { booking_ids: bookingId },
+      select: {
+        id: true,
+        booking_ids: true,
+        name_on_memorial: true,
+        first_cleaning_date: true,
+        second_cleaning_date: true,
+        status: true,
+        createdAt: true,
+        flower: {
+          select: {
+            Name: true,
+            Price: true
+          }
+        },
+        user: {
+          select: {
+            customer_id: true,
+            customer_name: true,
+            Phone: true,
+            email: true,
+          },
+        },
+        subscription: {
+          select: {
+            Subscription_name: true,
+            isSubscriptionPlan: true,
+            Price: true,
+          },
+        },
+      },
     });
     if (!booking) throw new NotFoundException('Booking not found');
     return {
       message: 'Booking fetched successfully',
-      data: {
-        booking_ids: booking.booking_ids,
-        status: booking.status,
-        first_cleaning_date: booking.first_cleaning_date,
-        second_cleaning_date: booking.second_cleaning_date,
-      },
+      data: booking,
       status: HttpStatus.OK,
     };
   }
@@ -468,6 +518,31 @@ export class BookingService {
 
     const [bookings, total] = await this.prisma.$transaction([
       this.prisma.booking.findMany({
+        select: {
+          id: true,
+          booking_ids: true,
+          name_on_memorial: true,
+          first_cleaning_date: true,
+          second_cleaning_date: true,
+          status: true,
+          createdAt: true,
+          Flower_id: true, // ✅ needed to check if flower included
+          user: {
+            select: {
+              customer_id: true,
+              customer_name: true,
+              Phone: true,
+              email: true,
+            },
+          },
+          subscription: {
+            select: {
+              Subscription_name: true,
+              isSubscriptionPlan: true,
+              Price: true,
+            },
+          },
+        },
         where,
         orderBy: { createdAt: 'desc' },
         skip,
@@ -476,9 +551,19 @@ export class BookingService {
       this.prisma.booking.count({ where }),
     ]);
 
+    // ✅ Add flowerIncluded flag dynamically
+    const bookingsWithFlowerFlag = bookings.map((booking) => ({
+      ...booking,
+      flowerIncluded: booking.Flower_id !== null, // true if Flower_id exists
+    }));
+
+    // ✅ Optionally remove Flower_id from response
+    const sanitizedBookings = bookingsWithFlowerFlag.map(({ Flower_id, ...rest }) => rest);
+
+
     return {
       message: 'Service bookings fetched successfully',
-      data: bookings,
+      data: sanitizedBookings,
       meta: {
         total,
         page,

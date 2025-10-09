@@ -40,18 +40,7 @@ export class AuthController {
     return this.authservice.logout();
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
-  @Get('users')
-  async getAllUsers(
-    @Query('search') search: string,
-    @Query('page') page: string,
-    @Query('limit') limit: string,
-  ) {
-    return this.authservice.getAllUsers({ search, page, limit });
-  }
-
-
+  //user specific routes
   @UseGuards(JwtAuthGuard)
   @Get('profile')
   getProfile(@Request() req) {
@@ -59,6 +48,7 @@ export class AuthController {
     return this.authservice.userProfile(customer_id);
   }
 
+  //user specific routes
   @UseGuards(JwtAuthGuard)
   @Put("profile")
   async updateUser(
@@ -86,8 +76,73 @@ export class AuthController {
     return this.authservice.resetPassword(dto);
   }
 
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @Get('users')
+  async getAllUsers(
+    @Query('search') search: string,
+    @Query('page') page: string,
+    @Query('limit') limit: string,
+  ) {
+    return this.authservice.getAllUsers({ search, page, limit });
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @Get('users/:id')
+  async getUsersbyId(
+    @Param('id') id: number,
+  ) {
+    return this.authservice.getUsersbyId(id);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @Patch('users/:id')
+  async activateUser(
+    @Param('id') id: number,
+    @Body('isActive') isActive: boolean,
+  ) {
+    return this.authservice.updateUserActiveStatus(id, isActive);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @Get('users/:id/bookings')
+  async getAllBookingsOfUsers(
+    @Param('id') id: number,
+  ) {
+    return this.authservice.getAllBookingsOfUsers(id);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @Get('users/:id/memorial-profiles')
+  async getAllMemorialProfilesOfUsers(
+    @Param('id') id: number,
+  ) {
+    return this.authservice.getAllMemorialProfilesOfUsers(id);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @Get('users/:id/bookings')
+  async getEachBookingsOfUsers(
+    @Param('id') id: number,
+    @Query('bookingId') booking_id: string,
+  ) {
+    return this.authservice.getEachBookingsOfUsers(id, booking_id);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @Get('users/:id/memorial-profiles')
+  async getEachMemorialProfilesOfUsers(
+    @Param('id') id: number,
+    @Query('slug') slug: string,
+  ) {
+    return this.authservice.getEachMemorialProfilesOfUsers(id, slug);
+  }
+
 }
-
-
-
-

@@ -46,22 +46,22 @@ export class OrdersService {
   }
 
 
-  async findOne(id: number, userId: number) {
+  async findOne(order_number: string, userId: number) {
     const order = await this.prisma.orders.findFirst({
-      where: { id, User_id: userId }, // must match both id and User_id
+      where: { orderNumber: order_number, User_id: userId }, // must match both id and User_id
     });
 
     if (!order) {
-      throw new NotFoundException(`No order found with ID ${id} for this user`);
+      throw new NotFoundException(`No order found with ID ${order_number} for this user`);
     }
 
     return order;
   }
 
 
-  async update(id: number, updateOrderDto: UpdateOrderDto) {
+  async update(id: string, updateOrderDto: UpdateOrderDto) {
     return this.prisma.orders.update({
-      where: { id },
+      where: { orderNumber: id },
       data: {
         ...updateOrderDto,
       },
@@ -69,15 +69,15 @@ export class OrdersService {
   }
 
   //ADMIN ONLY
-  async remove(id: number) {
+  async remove(id: string) {
     return this.prisma.orders.delete({
-      where: { id },
+      where: { orderNumber: id },
     });
   }
 
-  async updateStatus(id: number, updatestatusdto: UpdateOrderStatusDto) {
+  async updateStatus(order_number: string, updatestatusdto: UpdateOrderStatusDto) {
     return this.prisma.orders.update({
-      where: { id },
+      where: { orderNumber: order_number },
       data: {
         status: updatestatusdto.status,
       },
@@ -129,12 +129,12 @@ export class OrdersService {
 
 
 
-  async findOneByAdmin(id: number) {
+  async findOneByAdmin(order_number: string) {
     const order = await this.prisma.orders.findFirst({
-      where: { id }, // must match both id and User_id
+      where: { orderNumber: order_number }, // must match both id and User_id
     });
     if (!order) {
-      throw new NotFoundException(`No order found with ID ${id} for this user`);
+      throw new NotFoundException(`No order found with ID ${order_number} for this user`);
     }
     return order;
   }
