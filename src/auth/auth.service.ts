@@ -377,6 +377,18 @@ export class AuthService {
         return { message: 'Password changed successfully' };
     }
 
+    async sendProfileOwnerNotification(ownerEmail: string, visitorName: string, profileName: string) {
+        const subject = `New Memory Shared on ${profileName}`;
+        await this.emailService.sendMail({
+            to: ownerEmail,
+            subject,
+            template: "memoryNotification",
+            context: {
+                visitorName,
+                profileName
+            }
+        });
+    }
 
     // 1. Send OTP
     async forgotPassword(dto: ForgotPasswordDto) {
@@ -393,10 +405,13 @@ export class AuthService {
             },
         });
         await this.emailService.sendMail({
-            from: `"MyApp" <${process.env.EMAIL_USER}>`,
+            from: `"Magnolia Touch" <${process.env.MAIL_USER}>`,
             to: dto.email,
             subject: 'Password Reset OTP',
-            text: `Your OTP is ${otp}. It will expire in 10 minutes.`,
+            template: "forgot_password",
+            context: {
+                otp
+            }
         });
         return { message: 'OTP sent to email' };
     }
