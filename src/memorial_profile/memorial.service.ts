@@ -1,13 +1,10 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException, HttpException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException, HttpException, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { S3Service } from '../s3/s3.service';
-import { CreateDeadPersonProfileDto } from './dto/memorial_profile.dto';
-import { CreateFamilyMemberDto } from './dto/create-family.dto';
 import { CreateGuestBookDto } from './dto/create-guestbook.dto';
 import { generateCode } from 'src/utils/code-generator.util'; // adjust path if needed
 import { HttpStatus } from '@nestjs/common';
-import { CreateProfileDto } from './dto/create-profile.dto';
-import { contains } from 'class-validator';
+import { CreateProfileDto, CheckoutDto } from './dto/create-profile.dto';
 import { MailerService } from '@nestjs-modules/mailer';
 import { StripeService } from 'src/stripe/stripe.service';
 import {
@@ -16,6 +13,7 @@ import {
 import { OrdersService } from 'src/orders/orders.service';
 
 import { Logger } from '@nestjs/common';
+import { EventsDto, FamilyDto } from './dto/childrens.dto';
 
 @Injectable()
 export class MemorialProfileService {
@@ -45,170 +43,170 @@ export class MemorialProfileService {
     return `${baseUrl}${path}`;
   }
 
-  async create(dto: CreateProfileDto,
-    email: string,
-    user_id: number,
-    successUrl?: string,
-    cancelUrl?: string) {
-    // generate unique slug
-    let uniqueSlug = '';
-    let isUnique = false;
-    while (!isUnique) {
-      const tempSlug = generateCode();
-      const existing = await this.prisma.deadPersonProfile.findUnique({
-        where: { slug: tempSlug },
-      });
-      if (!existing) {
-        uniqueSlug = tempSlug;
-        isUnique = true;
-      }
-    }
+  // async create(dto: CreateProfileDto,
+  //   email: string,
+  //   user_id: number,
+  //   successUrl?: string,
+  //   cancelUrl?: string) {
+  //   // generate unique slug
+  //   let uniqueSlug = '';
+  //   let isUnique = false;
+  //   while (!isUnique) {
+  //     const tempSlug = generateCode();
+  //     const existing = await this.prisma.deadPersonProfile.findUnique({
+  //       where: { slug: tempSlug },
+  //     });
+  //     if (!existing) {
+  //       uniqueSlug = tempSlug;
+  //       isUnique = true;
+  //     }
+  //   }
 
-    // main profile
-    const profile = await this.prisma.deadPersonProfile.create({
-      data: {
-        owner_id: email,
-        firstName: dto.firstName,
-        lastName: dto.lastName,
-        born_date: dto.born_date,
-        death_date: dto.death_date,
-        memorial_place: dto.memorial_place,
-        profile_image: dto.profile_image,
-        background_image: dto.background_image,
-        is_paid: dto.is_paid ?? false,
-        slug: uniqueSlug,
+  //   // main profile
+  //   const profile = await this.prisma.deadPersonProfile.create({
+  //     data: {
+  //       owner_id: email,
+  //       firstName: dto.firstName,
+  //       lastName: dto.lastName,
+  //       born_date: dto.born_date,
+  //       death_date: dto.death_date,
+  //       memorial_place: dto.memorial_place,
+  //       profile_image: dto.profile_image,
+  //       background_image: dto.background_image,
+  //       is_paid: dto.is_paid ?? false,
+  //       slug: uniqueSlug,
 
-        // Nested creates
-        biography: {
-          create: (dto.biography ?? []).map((b) => ({
-            discription: b.discription,
-          })),
-        },
-        gallery: {
-          create: (dto.gallery ?? []).map((g) => ({
-            link: g.link,
-          })),
-        },
-        family: {
-          create: (dto.family ?? []).map((f) => ({
-            relationship: f.relationship,
-            name: f.name,
-          })),
-        },
+  //       // Nested creates
+  //       biography: {
+  //         create: (dto.biography ?? []).map((b) => ({
+  //           discription: b.discription,
+  //         })),
+  //       },
+  //       gallery: {
+  //         create: (dto.gallery ?? []).map((g) => ({
+  //           link: g.link,
+  //         })),
+  //       },
+  //       family: {
+  //         create: (dto.family ?? []).map((f) => ({
+  //           relationship: f.relationship,
+  //           name: f.name,
+  //         })),
+  //       },
 
-        // always create a guestBook
-        guestBook: {
-          create: {},
-        },
-        SocialLinks: {
-          create: (dto.socialLinks ?? []).map((s) => ({
-            socialMediaName: s.socialMediaName, // undefined if not provided
-            link: s.link,
-          })),
-        },
-        Events: {
-          create: (dto.events ?? []).map((e) => ({
-            year: e.year,
-            event: e.event,
-          })),
-        },
-      },
-      include: {
-        biography: true,
-        gallery: true,
-        family: true,
-        guestBook: { include: { guestBookItems: true } },
-        SocialLinks: true,
-        Events: true,
-      },
-    });
-    let subtotal = 100;
-    let product: any | null = null;
-    //setup payment urls
-    let shippingAddress: any | null = null;
-    let billingAddress: any | null = null;
-    let church: any | null = null;
-    if (dto.billingaddressId) {
-      billingAddress = await this.prisma.billingAddress.findUnique({ where: { bill_address_id: Number(dto.billingaddressId) } })
-    }
-    if (dto.shippingaddressId) {
-      shippingAddress = await this.prisma.userAddress.findUnique({ where: { deli_address_id: Number(dto.shippingaddressId) } })
-    }
-    else if (dto.church_id) {
-      church = await this.prisma.church.findUnique({ where: { church_id: Number(dto.church_id) } })
-    }
+  //       // always create a guestBook
+  //       guestBook: {
+  //         create: {},
+  //       },
+  //       SocialLinks: {
+  //         create: (dto.socialLinks ?? []).map((s) => ({
+  //           socialMediaName: s.socialMediaName, // undefined if not provided
+  //           link: s.link,
+  //         })),
+  //       },
+  //       Events: {
+  //         create: (dto.events ?? []).map((e) => ({
+  //           year: e.year,
+  //           event: e.event,
+  //         })),
+  //       },
+  //     },
+  //     include: {
+  //       biography: true,
+  //       gallery: true,
+  //       family: true,
+  //       guestBook: { include: { guestBookItems: true } },
+  //       SocialLinks: true,
+  //       Events: true,
+  //     },
+  //   });
+  //   let subtotal = 100;
+  //   let product: any | null = null;
+  //   //setup payment urls
+  //   let shippingAddress: any | null = null;
+  //   let billingAddress: any | null = null;
+  //   let church: any | null = null;
+  //   if (dto.billingaddressId) {
+  //     billingAddress = await this.prisma.billingAddress.findUnique({ where: { bill_address_id: Number(dto.billingaddressId) } })
+  //   }
+  //   if (dto.shippingaddressId) {
+  //     shippingAddress = await this.prisma.userAddress.findUnique({ where: { deli_address_id: Number(dto.shippingaddressId) } })
+  //   }
+  //   else if (dto.church_id) {
+  //     church = await this.prisma.church.findUnique({ where: { church_id: Number(dto.church_id) } })
+  //   }
 
-    let OrderCreated: any;
-    try {
-      //hardcode for demo
-      subtotal = product ? Number(product.price) : 100; // fallback ₹100 / $1.00
-      // 2️⃣ Ensure subtotal > 0
+  //   let OrderCreated: any;
+  //   try {
+  //     //hardcode for demo
+  //     subtotal = product ? Number(product.price) : 100; // fallback ₹100 / $1.00
+  //     // 2️⃣ Ensure subtotal > 0
 
-      // 1️⃣ Create Order in DB
-      const order = await this.orderservice.create({
-        User_id: user_id,
-        orderNumber: generateOrderIdforProduct(),
-        status: 'pending',
-        totalAmount: subtotal,
-        shippingAddressId: Number(dto.shippingaddressId) ?? null,
-        billingAddressId: Number(dto.billingaddressId) ?? null,
-        church_id: Number(dto.church_id) ?? null,
-        memoryProfileId: profile.slug,
-        tracking_details: undefined,
-        delivery_agent_id: undefined,
-      });
-      if (subtotal <= 0) {
-        throw new Error('Subtotal must be greater than 0 to create a payment intent');
-      }
+  //     // 1️⃣ Create Order in DB
+  //     const order = await this.orderservice.create({
+  //       User_id: user_id,
+  //       orderNumber: generateOrderIdforProduct(),
+  //       status: 'pending',
+  //       totalAmount: subtotal,
+  //       shippingAddressId: Number(dto.shippingaddressId) ?? null,
+  //       billingAddressId: Number(dto.billingaddressId) ?? null,
+  //       church_id: Number(dto.church_id) ?? null,
+  //       memoryProfileId: profile.slug,
+  //       tracking_details: undefined,
+  //       delivery_agent_id: undefined,
+  //     });
+  //     if (subtotal <= 0) {
+  //       throw new Error('Subtotal must be greater than 0 to create a payment intent');
+  //     }
 
 
-      const checkoutSession = await this.stripeService.createCheckoutLinkForExistingOrder(
-        order,
-        email,
-        successUrl || this.getDefaultUrl('/booking/success'),
-        cancelUrl || this.getDefaultUrl('/booking/cancel')
-      );
+  //     const checkoutSession = await this.stripeService.createCheckoutLinkForExistingOrder(
+  //       order,
+  //       email,
+  //       successUrl || this.getDefaultUrl('/booking/success'),
+  //       cancelUrl || this.getDefaultUrl('/booking/cancel')
+  //     );
 
-      OrderCreated = {
-        id: order.id,
-        orderNumber: order.orderNumber,
-        memoryProfile: `http://localhost:3000/memories?code=${profile.slug}`,
-        shipping_name: shippingAddress?.Name ?? '',
-        shipping_street: shippingAddress?.street ?? '',
-        shipping_city: shippingAddress?.town_or_city ?? '',
-        shipping_country: shippingAddress?.country ?? '',
-        shipping_postcode: shippingAddress?.postcode ?? '',
-        billing_name: billingAddress?.Name ?? '',
-        billing_street: billingAddress?.street ?? '',
-        billing_city: billingAddress?.town_or_city ?? '',
-        billing_country: billingAddress?.country ?? '',
-        billing_postcode: billingAddress?.postcode ?? '',
-        church_name: church?.name ?? '',
-        church_city: church?.city ?? '',
-        church_state: church?.state ?? '',
-        church_address: church?.address ?? '',
-        amount: order.totalAmount,
-        status: order.status,
-        is_bought: order.is_paid,
-        checkout_url: checkoutSession.url!,
-        session_id: checkoutSession.id,
-        payment_status: checkoutSession.payment_status || 'pending',
-        expires_at: checkoutSession.expires_at
-          ? new Date(checkoutSession.expires_at * 1000).toISOString()
-          : undefined,
-      };
-    } catch (error) {
-      this.logger.error('Failed to create PaymentIntent', error.stack);
-      throw error;
-    }
-    // Return response only for the first booking
-    return {
-      message: `Order created successfully with checkout link (Created ${OrderCreated.orderNumber} order internally)`,
-      booking: OrderCreated, profile,
-      status: HttpStatus.OK,
-    };
+  //     OrderCreated = {
+  //       id: order.id,
+  //       orderNumber: order.orderNumber,
+  //       memoryProfile: `http://localhost:3000/memories?code=${profile.slug}`,
+  //       shipping_name: shippingAddress?.Name ?? '',
+  //       shipping_street: shippingAddress?.street ?? '',
+  //       shipping_city: shippingAddress?.town_or_city ?? '',
+  //       shipping_country: shippingAddress?.country ?? '',
+  //       shipping_postcode: shippingAddress?.postcode ?? '',
+  //       billing_name: billingAddress?.Name ?? '',
+  //       billing_street: billingAddress?.street ?? '',
+  //       billing_city: billingAddress?.town_or_city ?? '',
+  //       billing_country: billingAddress?.country ?? '',
+  //       billing_postcode: billingAddress?.postcode ?? '',
+  //       church_name: church?.name ?? '',
+  //       church_city: church?.city ?? '',
+  //       church_state: church?.state ?? '',
+  //       church_address: church?.address ?? '',
+  //       amount: order.totalAmount,
+  //       status: order.status,
+  //       is_bought: order.is_paid,
+  //       checkout_url: checkoutSession.url!,
+  //       session_id: checkoutSession.id,
+  //       payment_status: checkoutSession.payment_status || 'pending',
+  //       expires_at: checkoutSession.expires_at
+  //         ? new Date(checkoutSession.expires_at * 1000).toISOString()
+  //         : undefined,
+  //     };
+  //   } catch (error) {
+  //     this.logger.error('Failed to create PaymentIntent', error.stack);
+  //     throw error;
+  //   }
+  //   // Return response only for the first booking
+  //   return {
+  //     message: `Order created successfully with checkout link (Created ${OrderCreated.orderNumber} order internally)`,
+  //     booking: OrderCreated, profile,
+  //     status: HttpStatus.OK,
+  //   };
 
-  }
+  // }
 
 
   async getProfile(slug: string) {
@@ -345,7 +343,7 @@ export class MemorialProfileService {
       await this.sendProfileOwnerNotification(
         profileOwnerEmail,
         visitorName,
-        profile.firstName || profile.lastName // adjust based on your DB field
+        profile.firstName || profile.lastName || "owner name" // adjust based on your DB field
       );
     }
     return {
@@ -592,204 +590,6 @@ export class MemorialProfileService {
     };
   }
 
-  //Add family members to the profile
-  async addFamilyMembers(email: string, slug: string, relation: string, dto: CreateFamilyMemberDto) {
-    const { name } = dto;
-    const profile = await this.prisma.deadPersonProfile.findUnique({
-      where: { slug },
-      include: {
-        family: true,
-      },
-    });
-    if (!profile || !profile.family.length) {
-      throw new NotFoundException('Family not found for this profile');
-    }
-    if (email != profile.owner_id) {
-      throw new ForbiddenException('You are not authorized to view this guestbook');
-    }
-    const family_id = profile.family[0].family_id; // assuming one-to-one family
-    // Validate relation to prevent arbitrary table access
-    const validRelations = [
-      'parents', 'siblings', 'cousins', 'friends', 'spouse',
-      'nieceAndNephew', 'childrens', 'pets',
-      'grandchildrens', 'grandparents', 'greatGrandParents',
-    ];
-    if (!validRelations.includes(relation)) {
-      throw new BadRequestException(`Invalid relation: ${relation}`);
-    }
-    // Construct Prisma model name dynamically (capitalize first letter)
-    const model = {
-      nieceAndNephew: 'nieceAndNephew',
-      grandchildrens: 'grandchildrens',
-      grandparents: 'grandparents',
-      greatGrandParents: 'greatGrandParents',
-      pets: 'pets',
-      childrens: 'childrens',
-      spouse: 'spouse',
-      friends: 'friends',
-      cousins: 'cousins',
-      siblings: 'siblings',
-      parents: 'parents'
-    }[relation] ?? relation; // keep consistent for special cases
-    const modelName = model.charAt(0).toUpperCase() + model.slice(1);
-    // Create the family member using the appropriate model
-    const created = await this.prisma[modelName].create({
-      data: {
-        name: name,
-        family_id,
-        deadPersonProfiles: slug,
-      },
-    });
-    return {
-      message: `${modelName} member added`,
-      data: created,
-      status: HttpStatus.CREATED,
-    };
-  }
-
-  async getFamily(slug: string) {
-    const profile = await this.prisma.deadPersonProfile.findUnique({
-      where: { slug }
-    });
-
-    if (!profile) {
-      throw new NotFoundException('Profile not found');
-    }
-
-    return {
-      message: 'Profile fetched successfully',
-      data: profile,
-      status: HttpStatus.OK,
-    };
-  }
-
-  async getFamilybyId(slug: string, relation: string, id: number) {
-    const validRelations = [
-      'parents', 'siblings', 'cousins', 'friends', 'spouse',
-      'nieceAndNephew', 'childrens', 'pets',
-      'grandchildrens', 'grandparents', 'greatGrandParents',
-    ];
-    if (!validRelations.includes(relation)) {
-      return {
-        message: `Invalid relation: ${relation}`,
-        status: HttpStatus.BAD_REQUEST,
-      };
-    }
-    // Fetch the family by slug, including all possible relations
-    const family = await this.prisma.family.findFirst({
-      where: { deadPersonProfiles: slug }
-    });
-    if (!family) {
-      throw new NotFoundException('Family not found for this profile');
-    }
-    const members = family[relation] as any[];
-    if (!members || !Array.isArray(members)) {
-      throw new NotFoundException(`No ${relation} members found for this profile`);
-    }
-    const member = members.find((m) => m.id === id);
-    if (!member) {
-      throw new NotFoundException(`${relation.charAt(0).toUpperCase() + relation.slice(1)} member with ID ${id} not found`);
-    }
-    return {
-      message: 'Family member fetched successfully',
-      data: member,
-      status: HttpStatus.OK,
-    };
-  }
-
-
-  async updateFamilybyId(email: string, slug: string, relation: string, id: number, dto: CreateFamilyMemberDto) {
-    const { name } = dto
-    const profile = await this.prisma.deadPersonProfile.findUnique({
-      where: { slug }
-    });
-    if (!profile) {
-      throw new NotFoundException('Profile not found');
-    }
-    if (email != profile.owner_id) {
-      throw new ForbiddenException('You are not authorized to view this guestbook');
-    }
-    const family = await this.prisma.family.findFirst({
-      where: { deadPersonProfiles: slug },
-    });
-    if (!family) {
-      throw new Error('Family not found for the provided slug');
-    }
-    // 2. Define a mapping of relation to corresponding model and update method
-    const relationMap: Record<string, string> = {
-      parents: 'parents',
-      siblings: 'siblings',
-      cousins: 'cousins',
-      friends: 'friends',
-      spouse: 'spouse',
-      nieceAndNephew: 'nieceAndNephew',
-      childrens: 'childrens',
-      pets: 'pets',
-      grandchildrens: 'grandchildrens',
-      grandparents: 'grandparents',
-      greatGrandparents: 'greatGrandparents',
-    };
-    const modelName = relationMap[relation.toLowerCase()];
-    if (!modelName) {
-      throw new Error(`Invalid relation type: ${relation}`);
-    }
-    // 3. Update the related record dynamically
-    const updated = await this.prisma[modelName].update({
-      where: {
-        id: id,
-        family_id: family.family_id,
-      },
-      data: {
-        name: name,
-      },
-    });
-    return { message: `${relation} updated successfully`, updated };
-  }
-
-
-  async deleteFamilybyId(email: string, slug: string, relation: string, id: number) {
-    const profile = await this.prisma.deadPersonProfile.findUnique({
-      where: { slug }
-    });
-    if (!profile) {
-      throw new NotFoundException('Profile not found');
-    }
-    if (email != profile.owner_id) {
-      throw new ForbiddenException('You are not authorized to view this guestbook');
-    }
-    // 1. Find the family using the slug
-    const family = await this.prisma.family.findFirst({
-      where: { deadPersonProfiles: slug },
-    });
-    if (!family) {
-      throw new NotFoundException('Family not found for the provided slug');
-
-    }
-    const relationMap: Record<string, string> = {
-      parents: 'parents',
-      siblings: 'siblings',
-      cousins: 'cousins',
-      friends: 'friends',
-      spouse: 'spouse',
-      nieceAndNephew: 'nieceAndNephew',
-      childrens: 'childrens',
-      pets: 'pets',
-      grandchildrens: 'grandchildrens',
-      grandparents: 'grandparents',
-      greatGrandParents: 'greatGrandParents',
-    };
-    const modelName = relationMap[relation.toLowerCase()];
-    if (!modelName) {
-      throw new Error(`Invalid relation type: ${relation}`);
-    }
-    await this.prisma[modelName].delete({
-      where: {
-        id: id,
-        family_id: family.family_id,
-      },
-    });
-    return { message: `${relation} member with ID ${id} deleted successfully.` };
-  }
 
 
   // This method is deprecated - use uploadMedia instead
@@ -1126,7 +926,7 @@ export class MemorialProfileService {
       await this.sendProfileOwnerNotification(
         profileOwnerEmail,
         visitorName,
-        profile.firstName || profile.lastName // adjust based on your DB field
+        profile.firstName || profile.lastName || "name" // adjust based on your DB field
       );
     }
 
@@ -1321,5 +1121,514 @@ export class MemorialProfileService {
   }
 
 
+  async saveDraftProfile(
+    dto: CreateProfileDto,
+    email: string,
+    user_id: number,
+    existingSlug?: string,       // If provided → update draft
+  ) {
+    // If user gave slug → try to update an existing draft
+    let profile: any = null;
+    console.log(existingSlug)
+    if (existingSlug) {
+      profile = await this.prisma.deadPersonProfileDraft.findUnique({
+        where: { slug: existingSlug },
+        include: {
+          biography: true,
+          gallery: true,
+          family: true,
+          socialLinks: true,
+          events: true,
+        },
+      });
+
+      if (!profile) {
+        throw new BadRequestException("Draft profile not found");
+      }
+      console.log(dto.profile_image)
+      // ---------- UPDATE DRAFT ------------------
+      const updated = await this.prisma.deadPersonProfileDraft.update({
+        where: { slug: existingSlug },
+        data: {
+          firstName: dto.firstName ?? profile.firstName,
+          lastName: dto.lastName ?? profile.lastName,
+          born_date: dto.born_date ?? profile.born_date,
+          death_date: dto.death_date ?? profile.death_date,
+          memorial_place: dto.memorial_place ?? profile.memorial_place,
+          profile_image:
+            dto.profile_image === undefined
+              ? null                                // user intentionally removed image
+              : (dto.profile_image ?? profile.profile_image), // keep or replace
+
+          background_image:
+            dto.background_image == undefined
+              ? null
+              : (dto.background_image ?? profile.background_image),
+          is_paid: false, // Always false for draft
+
+          // Overwrite nested arrays
+          biography: dto.biography && dto.biography.length > 0
+            ? {
+              upsert: {
+                update: {
+                  description: dto.biography[0].discription,
+                },
+                create: {
+                  description: dto.biography[0].discription,
+                },
+              },
+            }
+            : undefined,
+
+          gallery: {
+            deleteMany: {},
+            create: (dto.gallery ?? []).map(g => ({ link: g.link })),
+          },
+          family: {
+            deleteMany: {},
+            create: (dto.family ?? []).map(f => ({
+              relationship: f.relationship,
+              name: f.name,
+            })),
+          },
+          socialLinks: {
+            deleteMany: {},
+            create: (dto.socialLinks ?? []).map(s => ({
+              socialMediaName: s.socialMediaName,
+              link: s.link,
+            })),
+          },
+          events: {
+            deleteMany: {},
+            create: (dto.events ?? []).map(e => ({
+              year: e.year,
+              event: e.event,
+            })),
+          },
+        },
+        include: {
+          biography: true,
+          gallery: true,
+          family: true,
+          socialLinks: true,
+          events: true,
+        },
+      });
+
+      return {
+        message: "Draft updated successfully",
+        draft: updated,
+      };
+    }
+
+    // ---------- CREATE NEW DRAFT ---------------
+    // Create unique slug
+    let slug = "";
+    let ok = false;
+
+    while (!ok) {
+      const temp = generateCode();
+      const exists = await this.prisma.deadPersonProfileDraft.findUnique({
+        where: { slug: temp },
+      });
+      if (!exists) {
+        slug = temp;
+        ok = true;
+      }
+    }
+
+    const newDraft = await this.prisma.deadPersonProfileDraft.create({
+      data: {
+        owner_id: email,
+        firstName: dto.firstName,
+        lastName: dto.lastName,
+        born_date: dto.born_date,
+        death_date: dto.death_date,
+        memorial_place: dto.memorial_place,
+        profile_image: dto.profile_image,
+        background_image: dto.background_image,
+        is_paid: false,
+        slug,
+
+        biography:
+          dto.biography &&
+            dto.biography.length > 0 &&
+            dto.biography[0].discription
+            ? {
+              create: {
+                description: dto.biography[0].discription,
+              },
+            }
+            : undefined,
+
+        gallery: {
+          create: (dto.gallery ?? []).map(g => ({ link: g.link })),
+        },
+        family: {
+          create: (dto.family ?? []).map(f => ({
+            relationship: f.relationship,
+            name: f.name,
+          })),
+        },
+        socialLinks: {
+          create: (dto.socialLinks ?? []).map(s => ({
+            socialMediaName: s.socialMediaName,
+            link: s.link,
+          })),
+        },
+        events: {
+          create: (dto.events ?? []).map(e => ({
+            year: e.year,
+            event: e.event,
+          })),
+        },
+      },
+    });
+
+    return {
+      message: "Draft created successfully",
+      draft: { ...newDraft },
+    };
+  }
+
+
+  async submitDraft(email: string, user_id: number, dto: CheckoutDto) {
+    const { slug, shippingaddressId, billingaddressId, church_id, currency, successUrl, cancelUrl } = dto
+    // 1️⃣ Fetch draft
+    const draft = await this.prisma.deadPersonProfileDraft.findUnique({
+      where: { slug },
+      include: {
+        biography: true,
+        gallery: true,
+        family: true,
+        socialLinks: true,
+        events: true,
+      },
+    });
+
+    if (!draft) {
+      throw new BadRequestException("Draft not found");
+    }
+
+    // 2️⃣ Generate new slug for final profile
+    let uniqueSlug = "";
+    let ok = false;
+
+    while (!ok) {
+      const temp = generateCode();
+      const exists = await this.prisma.deadPersonProfile.findUnique({ where: { slug: temp } });
+      if (!exists) {
+        uniqueSlug = temp;
+        ok = true;
+      }
+    }
+
+    // 3️⃣ Create final profile
+    const profile = await this.prisma.deadPersonProfile.create({
+      data: {
+        owner_id: email,
+        firstName: draft.firstName,
+        lastName: draft.lastName,
+        born_date: draft.born_date,
+        death_date: draft.death_date,
+        memorial_place: draft.memorial_place,
+        profile_image: draft.profile_image,
+        background_image: draft.background_image,
+        slug: uniqueSlug,
+        is_paid: false,
+
+        biography: draft.biography
+          ? {
+            create: {
+              description: draft.biography.description ?? null,
+            }
+          }
+          : undefined,
+
+
+        gallery: {
+          create: draft.gallery.map(g => ({ link: g.link }))
+        },
+        family: {
+          create: draft.family.map(f => ({
+            name: f.name,
+            relationship: f.relationship
+          }))
+        },
+        SocialLinks: {
+          create: draft.socialLinks.map(s => ({
+            socialMediaName: s.socialMediaName,
+            link: s.link
+          }))
+        },
+        Events: {
+          create: draft.events.map(e => ({
+            year: e.year,
+            event: e.event
+          }))
+        },
+
+        guestBook: {
+          create: {}
+        }
+      }
+    });
+    let subtotal = 100;
+    let product: any | null = null;
+
+    let shippingAddress: any | null = null;
+    let billingAddress: any | null = null;
+    let church: any | null = null;
+
+    if (dto.billingaddressId) {
+      billingAddress = await this.prisma.billingAddress.findUnique({ where: { bill_address_id: Number(dto.billingaddressId) } })
+    }
+    if (dto.shippingaddressId) {
+      shippingAddress = await this.prisma.userAddress.findUnique({ where: { deli_address_id: Number(dto.shippingaddressId) } })
+    }
+    else if (dto.church_id) {
+      church = await this.prisma.church.findUnique({ where: { church_id: Number(dto.church_id) } })
+    }
+    let OrderCreated: any;
+
+    try {
+      //hardcode for demo
+      subtotal = product ? Number(product.price) : 100; // fallback ₹100 / $1.00
+      // 2️⃣ Ensure subtotal > 0
+
+      // 1️⃣ Create Order in DB
+      const order = await this.orderservice.create({
+        User_id: user_id,
+        orderNumber: generateOrderIdforProduct(),
+        status: 'pending',
+        totalAmount: subtotal,
+        shippingAddressId: Number(dto.shippingaddressId) ?? null,
+        billingAddressId: Number(dto.billingaddressId) ?? null,
+        church_id: Number(dto.church_id) ?? null,
+        memoryProfileId: profile.slug,
+        tracking_details: undefined,
+        delivery_agent_id: undefined,
+      });
+      if (subtotal <= 0) {
+        throw new Error('Subtotal must be greater than 0 to create a payment intent');
+      }
+
+
+      const checkoutSession = await this.stripeService.createCheckoutLinkForExistingOrder(
+        order,
+        email,
+        successUrl || this.getDefaultUrl('/booking/success'),
+        cancelUrl || this.getDefaultUrl('/booking/cancel')
+      );
+
+      OrderCreated = {
+        id: order.id,
+        orderNumber: order.orderNumber,
+        memoryProfile: `http://localhost:3000/memories?code=${profile.slug}`,
+        shipping_name: shippingAddress?.Name ?? '',
+        shipping_street: shippingAddress?.street ?? '',
+        shipping_city: shippingAddress?.town_or_city ?? '',
+        shipping_country: shippingAddress?.country ?? '',
+        shipping_postcode: shippingAddress?.postcode ?? '',
+        billing_name: billingAddress?.Name ?? '',
+        billing_street: billingAddress?.street ?? '',
+        billing_city: billingAddress?.town_or_city ?? '',
+        billing_country: billingAddress?.country ?? '',
+        billing_postcode: billingAddress?.postcode ?? '',
+        church_name: church?.name ?? '',
+        church_city: church?.city ?? '',
+        church_state: church?.state ?? '',
+        church_address: church?.address ?? '',
+        amount: order.totalAmount,
+        status: order.status,
+        is_bought: order.is_paid,
+        checkout_url: checkoutSession.url!,
+        session_id: checkoutSession.id,
+        payment_status: checkoutSession.payment_status || 'pending',
+        expires_at: checkoutSession.expires_at
+          ? new Date(checkoutSession.expires_at * 1000).toISOString()
+          : undefined,
+      };
+    } catch (error) {
+      this.logger.error('Failed to create PaymentIntent', error.stack);
+      throw error;
+    }
+
+    //Dekete Draft after Order is Created.
+    await this.prisma.$transaction(async (tx) => {
+      // 1. Delete child relations
+      await tx.biographyDraft.deleteMany({
+        where: { deadPersonSlug: slug },
+      });
+
+      await tx.galleryDraft.deleteMany({
+        where: { deadPersonSlug: slug },
+      });
+
+      await tx.familyDraft.deleteMany({
+        where: { deadPersonSlug: slug },
+      });
+
+      await tx.socialLinksDraft.deleteMany({
+        where: { deadPersonSlug: slug },
+      });
+
+      await tx.eventsDraft.deleteMany({
+        where: { deadPersonSlug: slug },
+      });
+
+      // 2. Delete main draft
+      await tx.deadPersonProfileDraft.delete({
+        where: { slug },
+      });
+    });
+
+
+    // Return response only for the first booking
+    return {
+      message: `Order created successfully with checkout link (Created ${OrderCreated.orderNumber} order internally)`,
+      booking: OrderCreated, profile,
+      status: HttpStatus.OK,
+    };
+  }
+
+  // CREATE
+  async createFamily(slug: string, dto: FamilyDto) {
+    return this.prisma.family.create({
+      data: {
+        ...dto,
+        deadPersonProfiles: slug,
+      },
+    });
+  }
+
+  // GET ALL for a profile
+  async getAllFamilies(slug: string) {
+    return this.prisma.family.findMany({
+      where: { deadPersonProfiles: slug },
+    });
+  }
+
+  // GET BY ID
+  async getFamilyById(slug: string, familyId: number) {
+    const family = await this.prisma.family.findFirst({
+      where: {
+        family_id: familyId,
+        deadPersonProfiles: slug,
+      },
+    });
+
+    if (!family) throw new NotFoundException('Family not found');
+    return family;
+  }
+
+  // UPDATE
+  async updateFamily(slug: string, familyId: number, dto: Partial<FamilyDto>) {
+    await this.getFamilyById(slug, familyId); // check existence
+
+    return this.prisma.family.update({
+      where: { family_id: familyId },
+      data: dto,
+    });
+  }
+
+  // DELETE
+  async deleteFamily(slug: string, familyId: number) {
+    await this.getFamilyById(slug, familyId);
+
+    return this.prisma.family.delete({
+      where: { family_id: familyId },
+    });
+  }
+
+  // CREATE
+  async createEvent(slug: string, dto: EventsDto) {
+    return this.prisma.events.create({
+      data: {
+        ...dto,
+        deadPersonProfiles: slug,
+      },
+    });
+  }
+
+  // GET ALL for a profile
+  async getAllEvents(slug: string) {
+    return this.prisma.events.findMany({
+      where: { deadPersonProfiles: slug },
+      orderBy: { year: 'asc' }, // Optional: makes timeline sorted
+    });
+  }
+
+  // GET BY ID
+  async getEventById(slug: string, eventId: number) {
+    const event = await this.prisma.events.findFirst({
+      where: {
+        id: eventId,
+        deadPersonProfiles: slug,
+      },
+    });
+
+    if (!event) throw new NotFoundException('Event not found');
+
+    return event;
+  }
+
+  // UPDATE
+  async updateEvent(slug: string, eventId: number, dto: Partial<EventsDto>) {
+    await this.getEventById(slug, eventId); // validate existence
+
+    return this.prisma.events.update({
+      where: { id: eventId },
+      data: dto,
+    });
+  }
+
+  // DELETE
+  async deleteEvent(slug: string, eventId: number) {
+    await this.getEventById(slug, eventId);
+
+    return this.prisma.events.delete({
+      where: { id: eventId },
+    });
+  }
+
+
+  // Update profile picture
+  async updateProfileImage(slug: string, email: string, url: string) {
+    const profile = await this.prisma.deadPersonProfile.findFirst({
+      where: {
+        slug,
+        owner_id: email
+      }
+    });
+
+    if (!profile) {
+      throw new UnauthorizedException("Not authorized to edit this profile");
+    }
+
+    return this.prisma.deadPersonProfile.update({
+      where: { profile_id: profile.profile_id },
+      data: { profile_image: url }
+    });
+  }
+
+  // Update background image
+  async updateBackgroundImage(slug: string, email: string, url: string) {
+    const profile = await this.prisma.deadPersonProfile.findFirst({
+      where: {
+        slug,
+        owner_id: email
+      }
+    });
+
+    if (!profile) {
+      throw new UnauthorizedException("Not authorized to edit this profile");
+    }
+
+    return this.prisma.deadPersonProfile.update({
+      where: { profile_id: profile.profile_id },
+      data: { background_image: url }
+    });
+  }
 
 }

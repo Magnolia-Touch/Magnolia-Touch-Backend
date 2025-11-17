@@ -1,4 +1,5 @@
-import { SocialNames } from '@prisma/client';
+//this is the main dto.
+
 import {
     IsString,
     IsOptional,
@@ -80,15 +81,19 @@ export class EventDto {
 }
 // CreateProfileDto stays the same
 export class CreateProfileDto {
+    @IsOptional()
     @IsString()
     firstName: string;
 
+    @IsOptional()
     @IsString()
     lastName: string;
 
+    @IsOptional()
     @IsString()
     born_date: string;
 
+    @IsOptional()
     @IsString()
     death_date: string;
 
@@ -144,7 +149,13 @@ export class CreateProfileDto {
     @Type(() => EventDto)
     events?: EventDto[];
 
-    @IsOptional()
+}
+
+
+export class CheckoutDto {
+    @IsString()
+    slug: string
+
     @IsInt()
     @Type(() => Number) // 👈 transforms "123" → 123
     shippingaddressId: number;
@@ -159,6 +170,15 @@ export class CreateProfileDto {
     @Type(() => Number) // 👈 transforms "123" → 123
     church_id: number;
 
+    @IsOptional()
     @IsString()
     currency: string;
+
+    @IsOptional()
+    @IsString()
+    successUrl: string;
+
+    @IsOptional()
+    @IsString()
+    cancelUrl: string;
 }

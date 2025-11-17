@@ -1,9 +1,151 @@
-add date filter on api which gives all cleanings on that date.
-add is_active on user table and make it editable from admin panel. -- done
-add flower_included field on cleaning service response. 
+can make every field optional. 
+on calling save draft, db instance is created and saved, should be updated if the existing value is replaced on draft.
+on calling create function, payment link should generate 
 
+async saveDraftProfile(
+  dto: CreateProfileDto,
+  email: string,
+  user_id: number,
+  existingSlug?: string,       // If provided → update draft
+) {
+  // If user gave slug → try to update an existing draft
+  let profile: any = null;
 
-done
+  if (existingSlug) {
+    profile = await this.prisma.deadPersonProfile.findUnique({
+      where: { slug: existingSlug },
+      include: {
+        biography: true,
+        gallery: true,
+        family: true,
+        SocialLinks: true,
+        Events: true,
+      },
+    });
 
-bugs
-delete address
+    if (!profile) {
+      throw new BadRequestException("Draft profile not found");
+    }
+
+    // ---------- UPDATE DRAFT ------------------
+    const updated = await this.prisma.deadPersonProfile.update({
+      where: { slug: existingSlug },
+      data: {
+        firstName: dto.firstName ?? profile.firstName,
+        lastName: dto.lastName ?? profile.lastName,
+        born_date: dto.born_date ?? profile.born_date,
+        death_date: dto.death_date ?? profile.death_date,
+        memorial_place: dto.memorial_place ?? profile.memorial_place,
+        profile_image: dto.profile_image ?? profile.profile_image,
+        background_image: dto.background_image ?? profile.background_image,
+        is_paid: false, // Always false for draft
+
+        // Overwrite nested arrays
+        biography: {
+          deleteMany: {},
+          create: (dto.biography ?? []).map(b => ({ discription: b.discription })),
+        },
+        gallery: {
+          deleteMany: {},
+          create: (dto.gallery ?? []).map(g => ({ link: g.link })),
+        },
+        family: {
+          deleteMany: {},
+          create: (dto.family ?? []).map(f => ({
+            relationship: f.relationship,
+            name: f.name,
+          })),
+        },
+        SocialLinks: {
+          deleteMany: {},
+          create: (dto.socialLinks ?? []).map(s => ({
+            socialMediaName: s.socialMediaName,
+            link: s.link,
+          })),
+        },
+        Events: {
+          deleteMany: {},
+          create: (dto.events ?? []).map(e => ({
+            year: e.year,
+            event: e.event,
+          })),
+        },
+      },
+      include: {
+        biography: true,
+        gallery: true,
+        family: true,
+        SocialLinks: true,
+        Events: true,
+      },
+    });
+
+    return {
+      message: "Draft updated successfully",
+      draft: updated,
+    };
+  }
+
+  // ---------- CREATE NEW DRAFT ---------------
+  // Create unique slug
+  let slug = "";
+  let ok = false;
+
+  while (!ok) {
+    const temp = generateCode();
+    const exists = await this.prisma.deadPersonProfile.findUnique({
+      where: { slug: temp },
+    });
+    if (!exists) {
+      slug = temp;
+      ok = true;
+    }
+  }
+
+  const newDraft = await this.prisma.deadPersonProfile.create({
+    data: {
+      owner_id: email,
+      firstName: dto.firstName,
+      lastName: dto.lastName,
+      born_date: dto.born_date,
+      death_date: dto.death_date,
+      memorial_place: dto.memorial_place,
+      profile_image: dto.profile_image,
+      background_image: dto.background_image,
+      is_paid: false,
+      slug,
+
+      biography: {
+        create: (dto.biography ?? []).map(b => ({
+          discription: b.discription,
+        })),
+      },
+      gallery: {
+        create: (dto.gallery ?? []).map(g => ({ link: g.link })),
+      },
+      family: {
+        create: (dto.family ?? []).map(f => ({
+          relationship: f.relationship,
+          name: f.name,
+        })),
+      },
+      SocialLinks: {
+        create: (dto.socialLinks ?? []).map(s => ({
+          socialMediaName: s.socialMediaName,
+          link: s.link,
+        })),
+      },
+      Events: {
+        create: (dto.events ?? []).map(e => ({
+          year: e.year,
+          event: e.event,
+        })),
+      },
+    },
+  });
+
+  return {
+    message: "Draft created successfully",
+    draft: newDraft,
+  };
+}

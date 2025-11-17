@@ -55,15 +55,16 @@ model User {
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
-  Orders               Orders[]
-  Church               Church[]
-  Booking              Booking[]
-  Reviews              Reviews[]
-  UserAddress          UserAddress[]
-  BillingAddress       BillingAddress[]
-  Cart                 Cart[]
-  deadPersonProfiles   DeadPersonProfile[]
-  DeliveryAgentProfile DeliveryAgentProfile[]
+  Orders                 Orders[]
+  Church                 Church[]
+  Booking                Booking[]
+  Reviews                Reviews[]
+  UserAddress            UserAddress[]
+  BillingAddress         BillingAddress[]
+  Cart                   Cart[]
+  deadPersonProfiles     DeadPersonProfile[]
+  DeliveryAgentProfile   DeliveryAgentProfile[]
+  DeadPersonProfileDraft DeadPersonProfileDraft[]
 }
 
 model UserAddress {
@@ -240,19 +241,19 @@ model Reviews {
 model DeadPersonProfile {
   profile_id       Int      @id @default(autoincrement())
   owner_id         String
-  firstName        String
-  lastName         String
+  firstName        String?
+  lastName         String?
   profile_image    String?
   background_image String?
-  born_date        String
-  death_date       String
+  born_date        String?
+  death_date       String?
   memorial_place   String?
   is_paid          Boolean  @default(false)
   slug             String   @unique
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  biography   Biography[]
+  biography   Biography?
   gallery     Gallery[]
   family      Family[]
   guestBook   GuestBook[]
@@ -275,8 +276,8 @@ model SocialLinks {
 
 model Events {
   id        Int      @id @default(autoincrement())
-  year      String
-  event     String
+  year      String?
+  event     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -286,11 +287,11 @@ model Events {
 
 model Biography {
   biography_id Int      @id @default(autoincrement())
-  discription  String   @db.Text
+  description  String?  @db.Text
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  deadPersonProfiles String
+  deadPersonProfiles String            @unique
   profile            DeadPersonProfile @relation(fields: [deadPersonProfiles], references: [slug])
 }
 
@@ -306,8 +307,8 @@ model Gallery {
 
 model Family {
   family_id    Int      @id @default(autoincrement())
-  relationship String
-  name         String
+  relationship String?
+  name         String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -381,4 +382,82 @@ model DeliveryAgentProfile {
   orders           Orders[]
 
   User User? @relation(fields: [deliveryagent_id], references: [customer_id])
+}
+
+model DeadPersonProfileDraft {
+  profile_id       Int      @id @default(autoincrement())
+  owner_id         String
+  firstName        String?
+  lastName         String?
+  profile_image    String?
+  background_image String?
+  born_date        String?
+  death_date       String?
+  memorial_place   String?
+  is_paid          Boolean  @default(false)
+  slug             String   @unique
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Relations
+  biography   BiographyDraft?
+  gallery     GalleryDraft[]
+  family      FamilyDraft[]
+  socialLinks SocialLinksDraft[]
+  events      EventsDraft[]
+
+  user User @relation(fields: [owner_id], references: [email])
+}
+
+model SocialLinksDraft {
+  id              Int      @id @default(autoincrement())
+  socialMediaName String?
+  link            String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  deadPersonSlug String
+  profile        DeadPersonProfileDraft @relation(fields: [deadPersonSlug], references: [slug])
+}
+
+model EventsDraft {
+  id        Int      @id @default(autoincrement())
+  year      String?
+  event     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  deadPersonSlug String
+  profile        DeadPersonProfileDraft @relation(fields: [deadPersonSlug], references: [slug])
+}
+
+model BiographyDraft {
+  biography_id Int      @id @default(autoincrement())
+  description  String?  @db.Text
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  deadPersonSlug String                 @unique
+  profile        DeadPersonProfileDraft @relation(fields: [deadPersonSlug], references: [slug])
+}
+
+model GalleryDraft {
+  gallery_id Int      @id @default(autoincrement())
+  link       String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  deadPersonSlug String
+  profile        DeadPersonProfileDraft @relation(fields: [deadPersonSlug], references: [slug])
+}
+
+model FamilyDraft {
+  family_id    Int      @id @default(autoincrement())
+  relationship String?
+  name         String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  deadPersonSlug String
+  profile        DeadPersonProfileDraft @relation(fields: [deadPersonSlug], references: [slug])
 }
