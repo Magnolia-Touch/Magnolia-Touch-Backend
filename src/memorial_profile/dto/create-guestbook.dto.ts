@@ -13,7 +13,4 @@ export class CreateGuestBookDto {
   phone: string;
   @IsString()
   message: string;
-
-
-
 }
