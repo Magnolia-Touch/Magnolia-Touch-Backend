@@ -1,7 +1,8 @@
 
 import {
   Controller, Post, Body, Query, Get, Patch, Request, Param, ParseIntPipe, Delete, UseInterceptors,
-  UploadedFile, UploadedFiles, HttpException, HttpStatus, NotFoundException, BadRequestException
+  UploadedFile, UploadedFiles, HttpException, HttpStatus, NotFoundException, BadRequestException,
+  HttpCode
 } from '@nestjs/common';
 import { MemorialProfileService } from './memorial.service';
 
@@ -572,6 +573,19 @@ export class MemorialController {
     const url = await this.s3Service.uploadFile(file, 'background-images');
 
     return this.deadPersonProfileService.updateBackgroundImage(slug, email, url);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('get-draft/:slug')
+  async getDraft(
+    @Param('slug') slug: string,
+    @Request() req,
+  ) {
+    return this.deadPersonProfileService.getDraftBySlug(
+      slug,
+      req.user.email,          // owner email
+      req.user.customer_id,    // owner id
+    );
   }
 
 }

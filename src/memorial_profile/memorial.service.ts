@@ -1631,4 +1631,33 @@ export class MemorialProfileService {
     });
   }
 
+
+  async getDraftBySlug(slug: string, email: string, user_id: number) {
+    const draft = await this.prisma.deadPersonProfileDraft.findUnique({
+      where: { slug },
+      include: {
+        biography: true,
+        gallery: true,
+        family: true,
+        socialLinks: true,
+        events: true,
+      },
+    });
+
+    if (!draft) {
+      throw new NotFoundException("Draft not found");
+    }
+
+    // Ownership check → only owner can access it
+    if (draft.owner_id !== email) {
+      throw new ForbiddenException("You are not allowed to access this draft");
+    }
+
+    return {
+      message: "Draft fetched successfully",
+      draft,
+    };
+  }
+
+
 }
