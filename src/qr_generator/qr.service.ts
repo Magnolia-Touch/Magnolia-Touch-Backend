@@ -11,27 +11,30 @@ export class QrService {
 
   ) { }
 
-  async generateAndSaveQRCode(link: string, filename: string): Promise<{ url: string }> {
+  async generateAndSaveQRCode(
+    link: string,
+    filename: string
+  ): Promise<{ url: string; data: any }> {
     try {
       const qrBuffer = await QRCode.toBuffer(link);
 
-
-      // Upload to S3 instead of saving locally
       const s3Url = await this.s3Service.uploadBuffer(
         qrBuffer,
         `${filename}.png`,
         'image/png',
         'qr-codes'
       );
-      await this.prisma.qrCode.create({
+
+      const data = await this.prisma.qrCode.create({
         data: { filename, url: s3Url }
       });
-      // Return JSON instead of plain string
-      return { url: s3Url };
+
+      return { url: s3Url, data };
     } catch (error) {
       throw new Error(`Failed to generate and upload QR code: ${error.message}`);
     }
   }
+
 
   // 👇 New function to check existence
   async checkQRCodeExists(slug: string): Promise<{ exists: boolean; url?: string }> {
@@ -49,6 +52,7 @@ export class QrService {
 
   }
   async getQrCode(filename: string) {
+    console.log("filename", filename)
     const qr = await this.prisma.qrCode.findUnique({
       where: { filename: filename }
     });
