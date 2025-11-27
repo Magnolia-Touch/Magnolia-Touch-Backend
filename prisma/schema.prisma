@@ -461,3 +461,10 @@ model FamilyDraft {
   deadPersonSlug String
   profile        DeadPersonProfileDraft @relation(fields: [deadPersonSlug], references: [slug])
 }
+
+model QrCode {
+  id        String   @id @default(uuid())
+  filename  String   @unique
+  url       String
+  createdAt DateTime @default(now())
+}

@@ -27,4 +27,14 @@ export class QrController {
     }
     return this.qrService.checkQRCodeExists(slug);
   }
+
+  @Get(':filename')
+  async getQrCode(@Query('filename') filename: string) {
+    const qr = await this.qrService.getQrCode(filename);
+    if (!qr) {
+      return { success: false, message: 'QR Code not found' };
+    }
+    return { success: true, data: qr };
+  }
+
 }

@@ -9,9 +9,11 @@ export class BiographyService {
     // CREATE or REPLACE
     async createOrReplaceBiography(slug: string, dto: BiographyDto, email: string) {
         // If biography already exists → delete it (or you can choose update)
+        console.log(email, slug)
         const profile = await this.prisma.deadPersonProfile.findUnique({
             where: { slug: slug, owner_id: email }
         })
+        console.log(profile)
         if (!profile) {
             throw new UnauthorizedException("Authorization Required")
         }

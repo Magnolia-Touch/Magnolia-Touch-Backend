@@ -1132,7 +1132,7 @@ export class MemorialProfileService {
     console.log(existingSlug)
     if (existingSlug) {
       profile = await this.prisma.deadPersonProfileDraft.findUnique({
-        where: { slug: existingSlug },
+        where: { slug: existingSlug, owner_id: email },
         include: {
           biography: true,
           gallery: true,
@@ -1229,7 +1229,7 @@ export class MemorialProfileService {
     while (!ok) {
       const temp = generateCode();
       const exists = await this.prisma.deadPersonProfileDraft.findUnique({
-        where: { slug: temp },
+        where: { slug: temp, owner_id: email },
       });
       if (!exists) {
         slug = temp;

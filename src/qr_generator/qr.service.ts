@@ -2,14 +2,19 @@
 import { Injectable } from '@nestjs/common';
 import * as QRCode from 'qrcode';
 import { S3Service } from '../s3/s3.service';
+import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class QrService {
-  constructor(private readonly s3Service: S3Service) { }
+  constructor(private readonly s3Service: S3Service,
+    private prisma: PrismaService
+
+  ) { }
 
   async generateAndSaveQRCode(link: string, filename: string): Promise<{ url: string }> {
     try {
       const qrBuffer = await QRCode.toBuffer(link);
+
 
       // Upload to S3 instead of saving locally
       const s3Url = await this.s3Service.uploadBuffer(
@@ -18,7 +23,9 @@ export class QrService {
         'image/png',
         'qr-codes'
       );
-
+      await this.prisma.qrCode.create({
+        data: { filename, url: s3Url }
+      });
       // Return JSON instead of plain string
       return { url: s3Url };
     } catch (error) {
@@ -38,5 +45,19 @@ export class QrService {
     }
 
     return { exists: false };
+
+
   }
+  async getQrCode(filename: string) {
+    const qr = await this.prisma.qrCode.findUnique({
+      where: { filename: filename }
+    });
+
+    if (!qr) {
+      return null;
+    }
+
+    return qr; // contains { id, filename, url, ... }
+  }
+
 }
