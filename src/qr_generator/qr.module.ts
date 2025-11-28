@@ -8,5 +8,6 @@ import { S3Module } from '../s3/s3.module';
   imports: [S3Module],
   providers: [QrService],
   controllers: [QrController],
+  exports: [QrService]
 })
-export class QrModule {}
+export class QrModule { }

@@ -407,13 +407,22 @@ export class StripeService {
         success_url: `${successUrl}?session_id={CHECKOUT_SESSION_ID}&order_id=${order.id}`,
         cancel_url: `${cancelUrl}?order_id=${order.id}`,
         customer_email: user_email,
+
         metadata: {
           order_id: String(order.id),
           orderNumber: order.orderNumber,
           booking_ids: order.booking_ids ?? '',
           description: 'Payment for Ordering Memorial Profile QR Code',
           user_email,
+          slug: order.memoryProfileId,
         },
+
+        payment_intent_data: {
+          metadata: {
+            order_id: String(order.id),
+            slug: order.memoryProfileId,
+          }
+        }
       });
 
       this.logger.log(

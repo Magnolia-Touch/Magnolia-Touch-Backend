@@ -14,6 +14,7 @@ import { OrdersService } from 'src/orders/orders.service';
 
 import { Logger } from '@nestjs/common';
 import { EventsDto, FamilyDto } from './dto/childrens.dto';
+import { QrService } from 'src/qr_generator/qr.service';
 
 @Injectable()
 export class MemorialProfileService {
@@ -1424,7 +1425,7 @@ export class MemorialProfileService {
       OrderCreated = {
         id: order.id,
         orderNumber: order.orderNumber,
-        memoryProfile: `http://localhost:3000/memories?code=${profile.slug}`,
+        memoryProfile: `https://api.magnoliatouch.com/memories?code=${profile.slug}`,
         shipping_name: shippingAddress?.Name ?? '',
         shipping_street: shippingAddress?.street ?? '',
         shipping_city: shippingAddress?.town_or_city ?? '',
