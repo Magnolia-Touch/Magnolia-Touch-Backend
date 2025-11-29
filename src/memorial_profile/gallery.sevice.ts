@@ -100,17 +100,18 @@ export class GalleryService {
 
 
     // DELETE gallery item
-    async deleteGalleryItem(slug: string, id: number, email: string) {
-        const profile = await this.prisma.deadPersonProfile.findUnique({
-            where: { slug: slug, owner_id: email }
-        })
-        if (!profile) {
-            throw new UnauthorizedException("Authorization Required")
-        }
-        await this.getById(slug, id);
+    async deleteGalleryItem(id: number, userId: number) {
 
         return this.prisma.gallery.delete({
-            where: { gallery_id: id },
+            where: { gallery_id: id, profile: { user: { customer_id: userId } } },
+        });
+    }
+
+    // DELETE gallery item
+    async deleteGalleryDraftItem(id: number, userId: number) {
+
+        return this.prisma.galleryDraft.delete({
+            where: { gallery_id: id, profile: { user: { customer_id: userId } } },
         });
     }
 }

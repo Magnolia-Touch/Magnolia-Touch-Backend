@@ -476,7 +476,7 @@ export class MemorialController {
       is_paid: false,
       gallery: galleryUrls,
     };
-
+    console.log("usermeail", req.user.email)
     return this.deadPersonProfileService.saveDraftProfile(
       dto,
       req.user.email,

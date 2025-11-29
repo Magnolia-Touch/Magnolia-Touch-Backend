@@ -9,6 +9,7 @@ import {
   CheckoutSessionMetadata,
   WebhookProcessingResult,
 } from './dto/webhook-event.dto';
+import { QrService } from 'src/qr_generator/qr.service';
 
 @Injectable()
 export class WebhookService {
@@ -19,6 +20,7 @@ export class WebhookService {
     private readonly ordersService: OrdersService,
     private readonly configService: ConfigService,
     private readonly errorHandler: WebhookErrorHandlerService,
+    private readonly qr: QrService
   ) { }
 
   verifyWebhookSignature(
@@ -151,6 +153,14 @@ export class WebhookService {
         await this.clearCart(parseInt(metadata.cartId));
       }
 
+      //here is the confusion. how to take slug from the session instance created while generating sessionurl.
+      const slug = metadata.slug; // ← Now available
+      if (!slug) {
+        throw new Error("Slug missing in PaymentIntent metadata!");
+      }
+      const link = `https://api.magnoliatouch.com/memories?code=${slug}`;
+      const qr = await this.qr.generateAndSaveQRCode(link, slug);
+
       return {
         success: true,
         message: `Order ${orderId} payment processed successfully`,
@@ -161,6 +171,7 @@ export class WebhookService {
     if (metadata.service_id || metadata.booking_id) {
       return this.handleBookingPaymentSuccess(paymentIntent, metadata);
     }
+
 
     return {
       success: true,
