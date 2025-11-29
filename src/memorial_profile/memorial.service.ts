@@ -1182,7 +1182,6 @@ export class MemorialProfileService {
             : undefined,
 
           gallery: {
-            deleteMany: {},
             create: (dto.gallery ?? []).map(g => ({ link: g.link })),
           },
           family: {
@@ -1335,7 +1334,7 @@ export class MemorialProfileService {
         memorial_place: draft.memorial_place,
         profile_image: draft.profile_image,
         background_image: draft.background_image,
-        slug: uniqueSlug,
+        slug: dto.slug,
         is_paid: false,
 
         biography: draft.biography

@@ -132,13 +132,25 @@ export class GalleryController {
 
     // DELETE
     @UseGuards(JwtAuthGuard)
-    @Delete(':slug/:id')
+    @Delete(':id')
     delete(
-        @Param('slug') slug: string,
         @Param('id', ParseIntPipe) id: number,
         @Request() req,
     ) {
-        const email = req.user.email
-        return this.galleryService.deleteGalleryItem(slug, id, email);
+
+        const userId = req.user.customer_id
+        return this.galleryService.deleteGalleryItem(id, userId);
+    }
+
+    // DELETE
+    @UseGuards(JwtAuthGuard)
+    @Delete('draft/:id')
+    deletegallery(
+        @Param('id', ParseIntPipe) id: number,
+        @Request() req,
+    ) {
+
+        const userId = req.user.customer_id
+        return this.galleryService.deleteGalleryDraftItem(id, userId);
     }
 }
