@@ -136,7 +136,6 @@ export class S3Service {
     return file.size <= maxSizeInBytes;
   }
 
-
   async fileExists(key: string): Promise<boolean> {
     try {
       const command = new GetObjectCommand({

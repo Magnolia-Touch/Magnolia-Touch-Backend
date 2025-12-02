@@ -7,16 +7,21 @@ import { Roles } from 'src/common/decoraters/roles.decorator';
 
 @Controller('revenue')
 export class RevenueController {
-    constructor(private readonly revenueService: RevenueService) { }
-    @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles('ADMIN')
-    @Get()
-    async getRevenue(
-        @Query('filterType') filterType: 'month' | 'year' | 'range' | 'normal',
-        @Query('service') service: 'cleaning' | 'memorial' | 'all' = 'all',
-        @Query('startDate') startDate?: string,
-        @Query('endDate') endDate?: string,
-    ) {
-        return this.revenueService.getRevenue(filterType, service, startDate, endDate);
-    }
+  constructor(private readonly revenueService: RevenueService) {}
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @Get()
+  async getRevenue(
+    @Query('filterType') filterType: 'month' | 'year' | 'range' | 'normal',
+    @Query('service') service: 'cleaning' | 'memorial' | 'all' = 'all',
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.revenueService.getRevenue(
+      filterType,
+      service,
+      startDate,
+      endDate,
+    );
+  }
 }

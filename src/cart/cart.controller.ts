@@ -1,5 +1,15 @@
 // cart.controller.ts
-import { Controller, Post, Delete, Get, Query, Body, Request, UseGuards, Param } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Delete,
+  Get,
+  Query,
+  Body,
+  Request,
+  UseGuards,
+  Param,
+} from '@nestjs/common';
 import { CartService } from './cart.service';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 
@@ -12,9 +22,13 @@ export class CartController {
   async addProductToCart(
     @Query('productId') productId: number,
     @Query('quantity') quantity: number,
-    @Request() req
+    @Request() req,
   ) {
-    return this.cartService.addToCart(+productId, +quantity, req.user.customer_id);
+    return this.cartService.addToCart(
+      +productId,
+      +quantity,
+      req.user.customer_id,
+    );
   }
 
   @UseGuards(JwtAuthGuard)
@@ -27,7 +41,7 @@ export class CartController {
   @Delete('remove-from-cart')
   async removeProductFromCart(
     @Query('productId') productId: number,
-    @Request() req
+    @Request() req,
   ) {
     return this.cartService.removeFromCart(+productId, req.user.customer_id);
   }

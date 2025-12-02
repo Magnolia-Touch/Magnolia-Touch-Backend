@@ -1,5 +1,15 @@
 // subscription/subscription.controller.ts
-import { Body, Controller, Get, ParseIntPipe, Post, Patch, Delete, Query, Param } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  ParseIntPipe,
+  Post,
+  Patch,
+  Delete,
+  Query,
+  Param,
+} from '@nestjs/common';
 import { SubscriptionService } from './subscription.service';
 import { SubscriptionDto } from './dto/subscription.dto';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
@@ -7,11 +17,9 @@ import { RolesGuard } from 'src/common/decoraters/roles.guard';
 import { UseGuards } from '@nestjs/common';
 import { Roles } from 'src/common/decoraters/roles.decorator';
 
-
-
 @Controller('subscription')
 export class SubscriptionController {
-  constructor(private readonly subscriptionService: SubscriptionService) { }
+  constructor(private readonly subscriptionService: SubscriptionService) {}
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
@@ -25,7 +33,7 @@ export class SubscriptionController {
     return this.subscriptionService.findAll();
   }
 
-  @Get(":id")
+  @Get(':id')
   async findOne(@Param('id', ParseIntPipe) id: number) {
     return this.subscriptionService.findOne(id);
   }

@@ -1,7 +1,13 @@
-import { IsBoolean, IsDate, IsInt, IsOptional, IsString, IsEnum } from 'class-validator';
-import { Type } from 'class-transformer'
-import { CleaningStatus } from '@prisma/client'
-
+import {
+  IsBoolean,
+  IsDate,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsEnum,
+} from 'class-validator';
+import { Type } from 'class-transformer';
+import { CleaningStatus } from '@prisma/client';
 
 export class CreateBookingDto {
   @IsString()
@@ -45,7 +51,5 @@ export class CreateBookingDto {
 
   @IsOptional()
   @IsEnum(CleaningStatus)
-  status?: CleaningStatus
-
+  status?: CleaningStatus;
 }
-

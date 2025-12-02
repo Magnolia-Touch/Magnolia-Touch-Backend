@@ -26,7 +26,7 @@ import { QrService } from 'src/qr_generator/qr.service';
     EventsController,
     BiographyController,
     SocialLinksController,
-    GalleryController
+    GalleryController,
   ],
   providers: [
     MemorialProfileService,
@@ -36,7 +36,7 @@ import { QrService } from 'src/qr_generator/qr.service';
     BiographyService,
     SocialLinksService,
     GalleryService,
-    QrService
+    QrService,
   ],
 })
-export class MemorialProfileModule { }
+export class MemorialProfileModule {}

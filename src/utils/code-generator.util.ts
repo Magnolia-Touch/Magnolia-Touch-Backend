@@ -27,7 +27,6 @@ export function getOrCreateOrders(user_id: number) {
   return orders;
 }
 
-
 export function generateOrderIdforProduct(): string {
   const now = new Date();
   const pad = (n: number, width: number) => {
@@ -47,4 +46,35 @@ import { randomUUID } from 'crypto';
 
 export function generateOrderIdforService(): string {
   return `MAGNOLIASERVICE-${Date.now()}-${randomUUID()}`;
+}
+
+
+
+
+import { randomInt } from 'crypto';
+export async function generateUsername(
+  firstName: string,
+  date: string,
+  checkExists: (username: string) => Promise<boolean>
+): Promise<string> {
+
+  // Base username
+  const base = `${firstName.toLowerCase()}_${date}`;
+
+  // 1️⃣ First check base username
+  if (!(await checkExists(base))) {
+    return base;
+  }
+
+  // 2️⃣ Try with numeric suffixes -1 to -5
+  for (let i = 1; i <= 5; i++) {
+    const attempt = `${base}-${i}`;
+    if (!(await checkExists(attempt))) {
+      return attempt;
+    }
+  }
+
+  // 3️⃣ If all 5 taken → add random digits
+  const randomSuffix = randomInt(10000, 99999); // 5-digit random number
+  return `${base}-${randomSuffix}`;
 }

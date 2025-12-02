@@ -22,5 +22,4 @@ export class CreateBillingAddressDto {
 
   @IsString()
   email: string;
-
 }

@@ -6,8 +6,8 @@ import { OrdersModule } from 'src/orders/orders.module';
 import { RevenueUtils } from './revenue.utils';
 
 @Module({
-    controllers: [RevenueController],
-    providers: [RevenueService, PrismaService, RevenueUtils],
-    exports: [RevenueService], // optional, if you want to use it in other modules
+  controllers: [RevenueController],
+  providers: [RevenueService, PrismaService, RevenueUtils],
+  exports: [RevenueService], // optional, if you want to use it in other modules
 })
-export class RevenueModule { }
+export class RevenueModule {}

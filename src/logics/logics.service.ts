@@ -6,12 +6,21 @@ import { stat } from 'fs';
 
 @Injectable()
 export class LogicService {
-  constructor(private prisma: PrismaService) { }
+  constructor(private prisma: PrismaService) {}
 
-  async estimateCost(
-    dto: EstimateCostDto,
-  ) {
-    const { church_name, plot_no, city, state, subscription_id, flower_id, first_cleaning_date, second_cleaning_date, anniversary_date, no_of_subsribe_years } = dto;
+  async estimateCost(dto: EstimateCostDto) {
+    const {
+      church_name,
+      plot_no,
+      city,
+      state,
+      subscription_id,
+      flower_id,
+      first_cleaning_date,
+      second_cleaning_date,
+      anniversary_date,
+      no_of_subsribe_years,
+    } = dto;
     const subscribed_plan = await this.prisma.subscriptionPlan.findUnique({
       where: { Subscription_id: subscription_id },
     });
@@ -23,12 +32,12 @@ export class LogicService {
       ? await this.prisma.flowers.findUnique({ where: { flower_id } })
       : null;
 
-    let flowerCost = 0
+    let flowerCost = 0;
     if (flower) {
-      flowerCost = parseInt(flower.Price, 10)
+      flowerCost = parseInt(flower.Price, 10);
     }
-    const planCost = parseInt(subscribed_plan.Price, 10);      // '2000' => 2000
-    const total = flowerCost + planCost
+    const planCost = parseInt(subscribed_plan.Price, 10); // '2000' => 2000
+    const total = flowerCost + planCost;
 
     return {
       message: 'Cost estimated successfully',
