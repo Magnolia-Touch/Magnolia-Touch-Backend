@@ -1104,13 +1104,13 @@ export class MemorialProfileService {
           memorial_place: dto.memorial_place ?? profile.memorial_place,
           profile_image:
             dto.profile_image === undefined
-              ? null // user intentionally removed image
-              : (dto.profile_image ?? profile.profile_image), // keep or replace
+              ? profile.profile_image   // user intentionally removed image
+              : dto.profile_image, // keep or replace
 
           background_image:
             dto.background_image == undefined
-              ? null
-              : (dto.background_image ?? profile.background_image),
+              ? profile.background_image
+              : dto.background_image,
           is_paid: false, // Always false for draft
 
           // Overwrite nested arrays
@@ -1665,13 +1665,13 @@ export class MemorialProfileService {
         memorial_place: dto.memorial_place ?? profile.memorial_place,
         profile_image:
           dto.profile_image === undefined
-            ? null // user intentionally removed image
-            : (dto.profile_image ?? profile.profile_image), // keep or replace
+            ? profile.profile_image   // user intentionally removed image
+            : dto.profile_image, // keep or replace
 
         background_image:
           dto.background_image == undefined
-            ? null
-            : (dto.background_image ?? profile.background_image),
+            ? profile.background_image
+            : dto.background_image,
         is_paid: false, // Always false for draft
 
         // Overwrite nested arrays
