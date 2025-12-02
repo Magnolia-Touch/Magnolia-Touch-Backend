@@ -6,35 +6,10 @@ on:
 
 env:
   NODE_VERSION: '20.x'
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
 
-  build:
-    runs-on: ubuntu-latest
-
-    outputs:
-      image: ${{ steps.image.outputs.image }}
-      digest: ${{ steps.build.outputs.digest }}
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_TOKEN }}
-
-          
   deploy-production:
-    needs: [build]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     environment:
@@ -47,40 +22,45 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.EC2_KEY }}
 
-      - name: Convert repo name to lowercase
-        id: repo
-        run: echo "REPO_LC=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
-
-      - name: Deploy to VPS
+      - name: Deploy to Hostinger VPS with PM2
         run: |
           ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} "
             echo '📂 Moving to project directory...'
-            cd var || exit 1
-            cd www
-            cd Magnolia-Touch-Backend
+            cd /var/www/Magnolia-Touch-Backend || exit 1
 
-            echo '🔄 Resetting local repo and pulling latest code...'
+            echo '🔄 Pulling latest code...'
             git fetch --all
             git reset --hard origin/main
             git pull origin main
-            npm install
+
+            echo '📦 Installing dependencies...'
+            npm install --legacy-peer-deps
+
+            echo '🛠 Running Prisma commands...'
             npx prisma migrate deploy
             npx prisma generate
+
+            echo '🏗️ Building project...'
             npm run build
-            npm run seed
-            docker build -t nestjs-app .
 
-            echo '🚀 Stopping old container...'
-            docker stop nestjs-container
-            docker rm nestjs-container
-            docker run -d \
-              --name nestjs-container \
-              -p 3000:3000 \
-              --env-file .env \
-              nestjs-app
+            echo '🌱 Running seed...'
+            npm run seed || true
 
-            echo '🧹 Cleaning up unused data...'
-            docker system prune -af --volumes
-            echo '✅ Deployment complete!'
+            echo '🚀 Restarting PM2 service...'
+            # Create PM2 process only if not already running
+            if pm2 describe magnolia-api > /dev/null; then
+              echo '🔁 Restart existing PM2 service...'
+              pm2 restart magnolia-api
+            else
+              echo '⚙️ Starting new PM2 service...'
+              pm2 start dist/src/main.js --name magnolia-api
+            fi
+
+            echo '💾 Saving PM2 startup config...'
+            pm2 save
+
+            echo '🧹 Cleaning cache...'
+            npm cache clean --force
+
+            echo '✅ Deployment completed successfully!'
           "
-
