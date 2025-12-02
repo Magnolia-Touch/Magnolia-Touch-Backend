@@ -20,8 +20,8 @@ export class WebhookService {
     private readonly ordersService: OrdersService,
     private readonly configService: ConfigService,
     private readonly errorHandler: WebhookErrorHandlerService,
-    private readonly qr: QrService
-  ) { }
+    private readonly qr: QrService,
+  ) {}
 
   verifyWebhookSignature(
     body: Buffer,
@@ -60,59 +60,37 @@ export class WebhookService {
     try {
       switch (event.type) {
         case 'payment_intent.succeeded':
-          return await this.handlePaymentSucceeded(
-            event.data.object as Stripe.PaymentIntent,
-          );
+          return await this.handlePaymentSucceeded(event.data.object);
 
         case 'payment_intent.payment_failed':
-          return await this.handlePaymentFailed(
-            event.data.object as Stripe.PaymentIntent,
-          );
+          return await this.handlePaymentFailed(event.data.object);
 
         case 'payment_intent.canceled':
-          return await this.handlePaymentCanceled(
-            event.data.object as Stripe.PaymentIntent,
-          );
+          return await this.handlePaymentCanceled(event.data.object);
 
         case 'charge.dispute.created':
-          return await this.handleChargeDispute(
-            event.data.object as Stripe.Dispute,
-          );
+          return await this.handleChargeDispute(event.data.object);
 
         case 'invoice.payment_succeeded':
-          return await this.handleInvoicePaymentSucceeded(
-            event.data.object as Stripe.Invoice,
-          );
+          return await this.handleInvoicePaymentSucceeded(event.data.object);
 
         case 'invoice.payment_failed':
-          return await this.handleInvoicePaymentFailed(
-            event.data.object as Stripe.Invoice,
-          );
+          return await this.handleInvoicePaymentFailed(event.data.object);
 
         case 'customer.subscription.created':
-          return await this.handleSubscriptionCreated(
-            event.data.object as Stripe.Subscription,
-          );
+          return await this.handleSubscriptionCreated(event.data.object);
 
         case 'customer.subscription.updated':
-          return await this.handleSubscriptionUpdated(
-            event.data.object as Stripe.Subscription,
-          );
+          return await this.handleSubscriptionUpdated(event.data.object);
 
         case 'customer.subscription.deleted':
-          return await this.handleSubscriptionDeleted(
-            event.data.object as Stripe.Subscription,
-          );
+          return await this.handleSubscriptionDeleted(event.data.object);
 
         case 'checkout.session.completed':
-          return await this.handleCheckoutSessionCompleted(
-            event.data.object as Stripe.Checkout.Session,
-          );
+          return await this.handleCheckoutSessionCompleted(event.data.object);
 
         case 'checkout.session.expired':
-          return await this.handleCheckoutSessionExpired(
-            event.data.object as Stripe.Checkout.Session,
-          );
+          return await this.handleCheckoutSessionExpired(event.data.object);
 
         default:
           this.logger.warn(`Unhandled webhook event type: ${event.type}`);
@@ -156,7 +134,7 @@ export class WebhookService {
       //here is the confusion. how to take slug from the session instance created while generating sessionurl.
       const slug = metadata.slug; // ← Now available
       if (!slug) {
-        throw new Error("Slug missing in PaymentIntent metadata!");
+        throw new Error('Slug missing in PaymentIntent metadata!');
       }
       const link = `https://api.magnoliatouch.com/memories?code=${slug}`;
       const qr = await this.qr.generateAndSaveQRCode(link, slug);
@@ -171,7 +149,6 @@ export class WebhookService {
     if (metadata.service_id || metadata.booking_id) {
       return this.handleBookingPaymentSuccess(paymentIntent, metadata);
     }
-
 
     return {
       success: true,
@@ -334,7 +311,7 @@ export class WebhookService {
         });
 
         this.logger.log(
-          `All bookings under parent ${booking.bkng_parent_id} marked as COMPLETED (payment success)`
+          `All bookings under parent ${booking.bkng_parent_id} marked as COMPLETED (payment success)`,
         );
 
         return {
@@ -360,7 +337,7 @@ export class WebhookService {
     this.logger.warn(
       `Payment intent processed but no valid booking found (metadata: ${JSON.stringify(
         metadata,
-      )})`
+      )})`,
     );
 
     return {
@@ -368,7 +345,6 @@ export class WebhookService {
       message: 'Payment processed but no booking identifier found',
     };
   }
-
 
   private async clearCart(cartId: number): Promise<void> {
     try {
@@ -494,7 +470,7 @@ export class WebhookService {
         });
 
         this.logger.log(
-          `All bookings under parent ${booking.bkng_parent_id} marked as COMPLETED (checkout session success)`
+          `All bookings under parent ${booking.bkng_parent_id} marked as COMPLETED (checkout session success)`,
         );
 
         return {
@@ -521,7 +497,7 @@ export class WebhookService {
     this.logger.warn(
       `Checkout session processed but no valid booking found (metadata: ${JSON.stringify(
         metadata,
-      )})`
+      )})`,
     );
 
     return {
@@ -529,7 +505,6 @@ export class WebhookService {
       message: 'Checkout session processed but no booking identifier found',
     };
   }
-
 
   private async checkExistingWebhookEvent(eventId: string): Promise<boolean> {
     try {

@@ -12,5 +12,4 @@ export class CreateChurchDto {
 
   @IsString()
   state: string;
-
 }

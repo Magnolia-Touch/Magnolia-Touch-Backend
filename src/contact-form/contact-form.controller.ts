@@ -4,10 +4,10 @@ import { ContactFormService } from './contact-form.service';
 
 @Controller('contact-form')
 export class ContactFormController {
-    constructor(private readonly service: ContactFormService) { }
+  constructor(private readonly service: ContactFormService) {}
 
-    @Post()
-    async submit(@Body() dto: CreateContactFormDto) {
-        return this.service.submitForm(dto);
-    }
+  @Post()
+  async submit(@Body() dto: CreateContactFormDto) {
+    return this.service.submitForm(dto);
+  }
 }

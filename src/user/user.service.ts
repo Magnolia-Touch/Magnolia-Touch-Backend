@@ -7,7 +7,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class UserService {
-  constructor(private prisma: PrismaService) { }
+  constructor(private prisma: PrismaService) {}
 
   // user creation functions
   async createUser(dto: CreateUserDto) {
@@ -18,16 +18,14 @@ export class UserService {
         email: email,
         password: password,
         Phone: Phone,
-        role: role
-      }
+        role: role,
+      },
     });
   }
-
 
   async findUserByEmaiorphone(email: string) {
     return await this.prisma.user.findUnique({ where: { email } });
   }
-
 
   async updateUser(id: number, data: UpdateUserDto) {
     return await this.prisma.user.update({
@@ -36,12 +34,9 @@ export class UserService {
     });
   }
 
-
-
   async deleteUser(id: number) {
     return await this.prisma.user.delete({ where: { customer_id: id } });
   }
-
 
   async validateUser(email: string, password: string) {
     const user = await this.prisma.user.findUnique({
@@ -53,30 +48,34 @@ export class UserService {
     return null;
   }
 
-
   // User delivery Address Creation function
   async createDeliAddrs(dto: CreateUserAddressDto, user_id: number) {
-    return this.prisma.userAddress.create({ data: { ...dto, userCustomer_id: user_id } });
+    return this.prisma.userAddress.create({
+      data: { ...dto, userCustomer_id: user_id },
+    });
   }
-
 
   async getAllDeliAddrs(user_id: number) {
-    return this.prisma.userAddress.findMany({ where: { userCustomer_id: user_id } });
+    return this.prisma.userAddress.findMany({
+      where: { userCustomer_id: user_id },
+    });
   }
-
 
   //User Billing Address Creation functions
   async createBillAddrs(dto: CreateBillingAddressDto, user_id: number) {
-    return this.prisma.billingAddress.create({ data: { ...dto, userCustomer_id: user_id } });
+    return this.prisma.billingAddress.create({
+      data: { ...dto, userCustomer_id: user_id },
+    });
   }
 
-
   async getAllBillAddr(user_id: number) {
-    return this.prisma.billingAddress.findMany({ where: { userCustomer_id: user_id } });
+    return this.prisma.billingAddress.findMany({
+      where: { userCustomer_id: user_id },
+    });
   }
 
   async getActiveSubscription(user_id: number) {
-    return this.prisma.booking.findMany({ where: { User_id: user_id } })
+    return this.prisma.booking.findMany({ where: { User_id: user_id } });
   }
 
   // ---------------- Delivery Address ----------------
@@ -87,23 +86,33 @@ export class UserService {
   }
 
   // Update Delivery Address
-  async updateDeliAddr(deli_address_id: number, dto: Partial<CreateUserAddressDto>, user_id: number) {
+  async updateDeliAddr(
+    deli_address_id: number,
+    dto: Partial<CreateUserAddressDto>,
+    user_id: number,
+  ) {
     const result = await this.prisma.userAddress.updateMany({
       where: { deli_address_id, userCustomer_id: user_id },
       data: dto,
     });
 
     if (result.count === 0) {
-      return { success: false, message: 'Delivery address not found or not updated' };
+      return {
+        success: false,
+        message: 'Delivery address not found or not updated',
+      };
     }
 
     const updated = await this.prisma.userAddress.findFirst({
       where: { deli_address_id, userCustomer_id: user_id },
     });
 
-    return { success: true, message: 'Delivery address updated successfully', data: updated };
+    return {
+      success: true,
+      message: 'Delivery address updated successfully',
+      data: updated,
+    };
   }
-
 
   // Delete Delivery Address
   async deleteDeliAddr(deli_address_id: number, user_id: number) {
@@ -112,13 +121,14 @@ export class UserService {
     });
 
     if (result.count === 0) {
-      return { success: false, message: 'Delivery address not found or already deleted' };
+      return {
+        success: false,
+        message: 'Delivery address not found or already deleted',
+      };
     }
 
     return { success: true, message: 'Delivery address deleted successfully' };
   }
-
-
 
   // ---------------- Billing Address ----------------
   async getBillAddrById(bill_address_id: number, user_id: number) {
@@ -127,21 +137,32 @@ export class UserService {
     });
   }
 
-  async updateBillAddr(bill_address_id: number, dto: Partial<CreateBillingAddressDto>, user_id: number) {
+  async updateBillAddr(
+    bill_address_id: number,
+    dto: Partial<CreateBillingAddressDto>,
+    user_id: number,
+  ) {
     const result = await this.prisma.billingAddress.updateMany({
       where: { bill_address_id, userCustomer_id: user_id },
       data: dto,
     });
 
     if (result.count === 0) {
-      return { success: false, message: 'Billing address not found or not updated' };
+      return {
+        success: false,
+        message: 'Billing address not found or not updated',
+      };
     }
 
     const updated = await this.prisma.billingAddress.findFirst({
       where: { bill_address_id, userCustomer_id: user_id },
     });
 
-    return { success: true, message: 'Billing address updated successfully', data: updated };
+    return {
+      success: true,
+      message: 'Billing address updated successfully',
+      data: updated,
+    };
   }
 
   async deleteBillAddr(bill_address_id: number, user_id: number) {
@@ -150,11 +171,12 @@ export class UserService {
     });
 
     if (result.count === 0) {
-      return { success: false, message: 'Billing address not found or already deleted' };
+      return {
+        success: false,
+        message: 'Billing address not found or already deleted',
+      };
     }
 
     return { success: true, message: 'Billing address deleted successfully' };
   }
 }
-
-

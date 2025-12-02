@@ -1,4 +1,9 @@
-import { Injectable, HttpStatus, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  HttpStatus,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { S3Service } from '../s3/s3.service';
 import { CreateFlowerDto } from './dto/createflower.dto';
@@ -7,8 +12,8 @@ import { CreateFlowerDto } from './dto/createflower.dto';
 export class FlowersService {
   constructor(
     private prisma: PrismaService,
-    private s3Service: S3Service
-  ) { }
+    private s3Service: S3Service,
+  ) {}
 
   async createFlower(dto: CreateFlowerDto, image: Express.Multer.File) {
     if (!image) {
@@ -16,15 +21,24 @@ export class FlowersService {
     }
 
     // Validate image type
-    const allowedImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    const allowedImageTypes = [
+      'image/jpeg',
+      'image/png',
+      'image/gif',
+      'image/webp',
+    ];
     if (!this.s3Service.validateFileType(image, allowedImageTypes)) {
-      throw new BadRequestException('Invalid image type. Only JPEG, PNG, GIF, and WebP images are allowed.');
+      throw new BadRequestException(
+        'Invalid image type. Only JPEG, PNG, GIF, and WebP images are allowed.',
+      );
     }
 
     // Validate file size (5MB limit)
     const maxSize = 5 * 1024 * 1024; // 5MB
     if (!this.s3Service.validateFileSize(image, maxSize)) {
-      throw new BadRequestException('Image size too large. Maximum size is 5MB.');
+      throw new BadRequestException(
+        'Image size too large. Maximum size is 5MB.',
+      );
     }
 
     // Upload to S3
@@ -73,9 +87,10 @@ export class FlowersService {
     };
   }
 
-
   async updateStock(flower_id: number, is_stock: boolean, stock_count: number) {
-    const flower = await this.prisma.flowers.findUnique({ where: { flower_id } })
+    const flower = await this.prisma.flowers.findUnique({
+      where: { flower_id },
+    });
     if (!flower) {
       throw new NotFoundException('Flower not found');
     }
@@ -84,23 +99,25 @@ export class FlowersService {
       where: { flower_id },
       data: {
         in_stock: is_stock,
-        stock_count: stock_count
-      }
-    })
+        stock_count: stock_count,
+      },
+    });
     return {
       message: 'Flower stock updated successfully',
       data: null,
       status: HttpStatus.OK,
-    }
+    };
   }
 
   async updateFlower(
     flower_id: number,
     dto: Partial<CreateFlowerDto>, // partial to allow updating some fields
-    image?: Express.Multer.File
+    image?: Express.Multer.File,
   ) {
     // find the flower
-    const flower = await this.prisma.flowers.findUnique({ where: { flower_id } });
+    const flower = await this.prisma.flowers.findUnique({
+      where: { flower_id },
+    });
     if (!flower) {
       throw new NotFoundException('Flower not found');
     }
@@ -109,14 +126,23 @@ export class FlowersService {
 
     // If image is passed, validate + upload new one
     if (image) {
-      const allowedImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      const allowedImageTypes = [
+        'image/jpeg',
+        'image/png',
+        'image/gif',
+        'image/webp',
+      ];
       if (!this.s3Service.validateFileType(image, allowedImageTypes)) {
-        throw new BadRequestException('Invalid image type. Only JPEG, PNG, GIF, and WebP images are allowed.');
+        throw new BadRequestException(
+          'Invalid image type. Only JPEG, PNG, GIF, and WebP images are allowed.',
+        );
       }
 
       const maxSize = 5 * 1024 * 1024; // 5MB
       if (!this.s3Service.validateFileSize(image, maxSize)) {
-        throw new BadRequestException('Image size too large. Maximum size is 5MB.');
+        throw new BadRequestException(
+          'Image size too large. Maximum size is 5MB.',
+        );
       }
 
       // delete old image from S3
@@ -150,7 +176,9 @@ export class FlowersService {
 
   async deleteFlower(flower_id: number) {
     // find flower
-    const flower = await this.prisma.flowers.findUnique({ where: { flower_id } });
+    const flower = await this.prisma.flowers.findUnique({
+      where: { flower_id },
+    });
     if (!flower) {
       throw new NotFoundException('Flower not found');
     }
@@ -171,6 +199,4 @@ export class FlowersService {
       status: HttpStatus.OK,
     };
   }
-
-
 }

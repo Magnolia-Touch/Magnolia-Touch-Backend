@@ -1,4 +1,12 @@
-import { IsInt, IsOptional, IsString, IsEnum, IsDecimal, IsArray, ValidateNested } from 'class-validator';
+import {
+  IsInt,
+  IsOptional,
+  IsString,
+  IsEnum,
+  IsDecimal,
+  IsArray,
+  ValidateNested,
+} from 'class-validator';
 import { OrderStatus } from '@prisma/client';
 
 export class CreateOrderDto {
@@ -20,10 +28,10 @@ export class CreateOrderDto {
 
   @IsOptional()
   @IsInt()
-  shippingAddressId?: number;   // ✅ fixed name
+  shippingAddressId?: number; // ✅ fixed name
 
   @IsInt()
-  billingAddressId: number;     // ✅ required, fixed name
+  billingAddressId: number; // ✅ required, fixed name
 
   @IsOptional()
   @IsInt()

@@ -1,30 +1,30 @@
-import { IsString } from "class-validator"
+import { IsString } from 'class-validator';
 
 export class FamilyDto {
-    @IsString()
-    relationship: string;
+  @IsString()
+  relationship: string;
 
-    @IsString()
-    name: string;
+  @IsString()
+  name: string;
 }
 
 export class EventsDto {
-    @IsString()
-    year: string;
+  @IsString()
+  year: string;
 
-    @IsString()
-    event: string;
+  @IsString()
+  event: string;
 }
 
 export class SocialLinksDto {
-    @IsString()
-    socialMediaName: string;
+  @IsString()
+  socialMediaName: string;
 
-    @IsString()
-    link: string;
+  @IsString()
+  link: string;
 }
 
 export class BiographyDto {
-    @IsString()
-    description: string;
+  @IsString()
+  description: string;
 }

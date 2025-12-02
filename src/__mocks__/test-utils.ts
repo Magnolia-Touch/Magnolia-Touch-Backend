@@ -101,7 +101,9 @@ export const mockJwtService = {
   verify: jest.fn().mockReturnValue({ sub: 'user-id', email: 'test@test.com' }),
   decode: jest.fn(),
   signAsync: jest.fn().mockResolvedValue('mocked-jwt-token'),
-  verifyAsync: jest.fn().mockResolvedValue({ sub: 'user-id', email: 'test@test.com' }),
+  verifyAsync: jest
+    .fn()
+    .mockResolvedValue({ sub: 'user-id', email: 'test@test.com' }),
 };
 
 // Mock ConfigService

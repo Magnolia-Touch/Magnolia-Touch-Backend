@@ -4,11 +4,11 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { OrdersService } from 'src/orders/orders.service';
 import { ConfigService } from '@nestjs/config';
 import { WebhookService } from './webhook.service';
-import { 
-  mockPrismaService, 
-  mockOrdersService, 
+import {
+  mockPrismaService,
+  mockOrdersService,
   mockConfigService,
-  mockWebhookService
+  mockWebhookService,
 } from '../__mocks__/test-utils';
 
 describe('StripeService', () => {

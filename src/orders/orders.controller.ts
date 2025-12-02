@@ -1,4 +1,16 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req, Query, ParseIntPipe } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  Req,
+  Query,
+  ParseIntPipe,
+} from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
@@ -11,7 +23,7 @@ import { UpdateTrackingDto } from './dto/update-tracking.dto';
 
 @Controller('orders')
 export class OrdersController {
-  constructor(private readonly ordersService: OrdersService) { }
+  constructor(private readonly ordersService: OrdersService) {}
 
   @Post()
   create(@Body() createOrderDto: CreateOrderDto) {
@@ -32,10 +44,12 @@ export class OrdersController {
 
   @UseGuards(JwtAuthGuard)
   @Get('my-orders/:id')
-  async getMyOrderById(@Req() req, @Param('order_number') order_number: string) {
+  async getMyOrderById(
+    @Req() req,
+    @Param('order_number') order_number: string,
+  ) {
     return this.ordersService.findOne(order_number, req.user.id);
   }
-
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
@@ -53,7 +67,10 @@ export class OrdersController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
   @Get('all-orders/:id')
-  async getMyOrderByIdByAdmin(@Req() req, @Param('order_number') order_number: string) {
+  async getMyOrderByIdByAdmin(
+    @Req() req,
+    @Param('order_number') order_number: string,
+  ) {
     return this.ordersService.findOneByAdmin(order_number);
   }
 
@@ -94,7 +111,6 @@ export class OrdersController {
     return this.ordersService.markOrderAsPaid(id);
   }
 
-
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateOrderDto: UpdateOrderDto) {
     return this.ordersService.update(id, updateOrderDto);
@@ -105,10 +121,11 @@ export class OrdersController {
     return this.ordersService.remove(id);
   }
 
-  @Patch(":order_number/status")
-  updateStatus(@Param('order_number') order_number: string, @Body() updatestatusdto: UpdateOrderStatusDto) {
-    return this.ordersService.updateStatus(order_number, updatestatusdto)
+  @Patch(':order_number/status')
+  updateStatus(
+    @Param('order_number') order_number: string,
+    @Body() updatestatusdto: UpdateOrderStatusDto,
+  ) {
+    return this.ordersService.updateStatus(order_number, updatestatusdto);
   }
-
-
 }

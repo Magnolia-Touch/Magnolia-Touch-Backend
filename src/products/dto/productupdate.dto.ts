@@ -24,5 +24,4 @@ export class UpdateProductDto {
   @IsOptional()
   @IsString()
   company_guarantee?: string;
-
 }

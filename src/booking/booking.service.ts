@@ -1,19 +1,29 @@
-import { PrismaService } from "src/prisma/prisma.service";
-import { CreateBookingDto } from "./dto/booking.dto";
-import { Injectable, HttpStatus, NotFoundException, ForbiddenException } from "@nestjs/common";
-import { StripeService } from "src/stripe/stripe.service";
-import { generateOrderIdforService } from "src/utils/code-generator.util";
-import { ChurchService } from "src/church/church.service";
-import { UpdateBookingstatusDto } from "./dto/update-booking.dto";
-import { CheckoutSessionLinkDto, BookingWithCheckoutDto, CreateBookingResponseDto } from "./dto/checkout-session-response.dto";
+import { PrismaService } from 'src/prisma/prisma.service';
+import { CreateBookingDto } from './dto/booking.dto';
+import {
+  Injectable,
+  HttpStatus,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
+import { StripeService } from 'src/stripe/stripe.service';
+import { generateOrderIdforService } from 'src/utils/code-generator.util';
+import { ChurchService } from 'src/church/church.service';
+import { UpdateBookingstatusDto } from './dto/update-booking.dto';
+import {
+  CheckoutSessionLinkDto,
+  BookingWithCheckoutDto,
+  CreateBookingResponseDto,
+} from './dto/checkout-session-response.dto';
 import { CleaningStatus } from '@prisma/client'; // adjust import path if needed
-UpdateBookingstatusDto
+UpdateBookingstatusDto;
 @Injectable()
 export class BookingService {
-  constructor(private prisma: PrismaService,
+  constructor(
+    private prisma: PrismaService,
     private stipeservice: StripeService,
-    private churchservice: ChurchService
-  ) { }
+    private churchservice: ChurchService,
+  ) {}
 
   private ensureHttpsUrl(url: string): string {
     if (!url) return url;
@@ -37,7 +47,7 @@ export class BookingService {
     user_Id: number,
     user_email: string,
     successUrl?: string,
-    cancelUrl?: string
+    cancelUrl?: string,
   ): Promise<CreateBookingResponseDto> {
     const {
       name_on_memorial,
@@ -55,8 +65,12 @@ export class BookingService {
 
     // Dates
     const first_date = new Date(first_cleaning_date);
-    const second_date = second_cleaning_date ? new Date(second_cleaning_date) : null;
-    const death_anniversary_date = anniversary_date ? new Date(anniversary_date) : null;
+    const second_date = second_cleaning_date
+      ? new Date(second_cleaning_date)
+      : null;
+    const death_anniversary_date = anniversary_date
+      ? new Date(anniversary_date)
+      : null;
 
     // Church creation
     const church = await this.prisma.church.create({
@@ -130,18 +144,19 @@ export class BookingService {
           no_of_subscription_years: totalYears,
           status: 'PENDING',
           is_bought: false,
-          totalAmount: amount
+          totalAmount: amount,
         },
       });
 
       // Only first booking gets checkout link + returned response
       if (i === 0) {
-        const checkoutSession = await this.stipeservice.createCheckoutLinkForExistingBooking(
-          booking,
-          user_email,
-          successUrl || this.getDefaultUrl('/booking/success'),
-          cancelUrl || this.getDefaultUrl('/booking/cancel')
-        );
+        const checkoutSession =
+          await this.stipeservice.createCheckoutLinkForExistingBooking(
+            booking,
+            user_email,
+            successUrl || this.getDefaultUrl('/booking/success'),
+            cancelUrl || this.getDefaultUrl('/booking/cancel'),
+          );
 
         firstBookingCreated = {
           id: booking.id,
@@ -169,12 +184,11 @@ export class BookingService {
     };
   }
 
-
   async getUserCheckoutLinks(
     user_id: number,
     user_email: string,
     successUrl?: string,
-    cancelUrl?: string
+    cancelUrl?: string,
   ): Promise<CheckoutSessionLinkDto[]> {
     // Get all user bookings
     const userBookings = await this.prisma.booking.findMany({
@@ -192,12 +206,13 @@ export class BookingService {
     for (const booking of userBookings) {
       try {
         // Create or retrieve checkout session for this booking
-        const checkoutSession = await this.stipeservice.createCheckoutLinkForExistingBooking(
-          booking,
-          user_email,
-          successUrl || this.getDefaultUrl('/booking/success'),
-          cancelUrl || this.getDefaultUrl('/booking/cancel')
-        );
+        const checkoutSession =
+          await this.stipeservice.createCheckoutLinkForExistingBooking(
+            booking,
+            user_email,
+            successUrl || this.getDefaultUrl('/booking/success'),
+            cancelUrl || this.getDefaultUrl('/booking/cancel'),
+          );
 
         checkoutLinks.push({
           checkout_url: checkoutSession.url!,
@@ -213,7 +228,10 @@ export class BookingService {
             : undefined,
         });
       } catch (error) {
-        console.error(`Failed to create checkout link for booking ${booking.id}:`, error);
+        console.error(
+          `Failed to create checkout link for booking ${booking.id}:`,
+          error,
+        );
         // Continue with other bookings even if one fails
       }
     }
@@ -226,12 +244,12 @@ export class BookingService {
     user_id: number,
     user_email: string,
     successUrl?: string,
-    cancelUrl?: string
+    cancelUrl?: string,
   ): Promise<BookingWithCheckoutDto | null> {
     const booking = await this.prisma.booking.findFirst({
       where: {
         id: booking_id,
-        User_id: user_id
+        User_id: user_id,
       },
       include: {
         Church: true,
@@ -245,12 +263,13 @@ export class BookingService {
     }
 
     try {
-      const checkoutSession = await this.stipeservice.createCheckoutLinkForExistingBooking(
-        booking,
-        user_email,
-        successUrl || this.getDefaultUrl('/booking/success'),
-        cancelUrl || this.getDefaultUrl('/booking/cancel')
-      );
+      const checkoutSession =
+        await this.stipeservice.createCheckoutLinkForExistingBooking(
+          booking,
+          user_email,
+          successUrl || this.getDefaultUrl('/booking/success'),
+          cancelUrl || this.getDefaultUrl('/booking/cancel'),
+        );
 
       return {
         id: booking.id,
@@ -268,7 +287,9 @@ export class BookingService {
           : undefined,
       };
     } catch (error) {
-      throw new Error(`Failed to create checkout link for booking: ${error.message}`);
+      throw new Error(
+        `Failed to create checkout link for booking: ${error.message}`,
+      );
     }
   }
 
@@ -310,8 +331,6 @@ export class BookingService {
     };
   }
 
-
-
   // USER: Check single booking status by booking id
   async getBookingStatusByBookingId(userId: number, bookingId: string) {
     const booking = await this.prisma.booking.findUnique({
@@ -321,7 +340,9 @@ export class BookingService {
     if (!booking) throw new NotFoundException('Booking not found');
 
     if (booking.User_id !== userId) {
-      throw new ForbiddenException('You are not allowed to access this booking');
+      throw new ForbiddenException(
+        'You are not allowed to access this booking',
+      );
     }
 
     return {
@@ -407,7 +428,9 @@ export class BookingService {
     }));
 
     // ✅ Optionally remove Flower_id from response
-    const sanitizedBookings = bookingsWithFlowerFlag.map(({ Flower_id, ...rest }) => rest);
+    const sanitizedBookings = bookingsWithFlowerFlag.map(
+      ({ Flower_id, ...rest }) => rest,
+    );
 
     return {
       message: 'User bookings fetched successfully',
@@ -421,8 +444,6 @@ export class BookingService {
       status: HttpStatus.OK,
     };
   }
-
-
 
   //Admin only API
   // USER: Check single booking status by booking id
@@ -440,8 +461,8 @@ export class BookingService {
         flower: {
           select: {
             Name: true,
-            Price: true
-          }
+            Price: true,
+          },
         },
         user: {
           select: {
@@ -472,7 +493,7 @@ export class BookingService {
     page = 1,
     limit = 10,
     cleaningStatus?: CleaningStatus,
-    dateQuery?: string // 🟢 single date query
+    dateQuery?: string, // 🟢 single date query
   ) {
     const skip = (page - 1) * limit;
 
@@ -558,8 +579,9 @@ export class BookingService {
     }));
 
     // ✅ Optionally remove Flower_id from response
-    const sanitizedBookings = bookingsWithFlowerFlag.map(({ Flower_id, ...rest }) => rest);
-
+    const sanitizedBookings = bookingsWithFlowerFlag.map(
+      ({ Flower_id, ...rest }) => rest,
+    );
 
     return {
       message: 'Service bookings fetched successfully',
@@ -573,12 +595,6 @@ export class BookingService {
       status: HttpStatus.OK,
     };
   }
-
-
-
-
-
-
 
   async patchBookingAsBought(booking_id: string): Promise<{ message: string }> {
     // 1. Find the booking first
@@ -616,8 +632,4 @@ export class BookingService {
 
     return { message: `Booking ${booking_id} marked as bought` };
   }
-
-
 }
-
-

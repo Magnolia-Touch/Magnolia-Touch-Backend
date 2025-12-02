@@ -5,12 +5,10 @@ import { LogicService } from './logics.service';
 
 @Controller('estimate')
 export class LogicController {
-  constructor(private readonly logicService: LogicService) { }
+  constructor(private readonly logicService: LogicService) {}
 
   @Get('estimate-cost')
-  async estimateCost(
-    @Body() dto: EstimateCostDto,
-  ) {
+  async estimateCost(@Body() dto: EstimateCostDto) {
     return await this.logicService.estimateCost(dto);
   }
 }

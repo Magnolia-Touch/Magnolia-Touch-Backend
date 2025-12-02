@@ -1,4 +1,10 @@
-import { IsDate, IsDateString, IsInt, IsOptional, IsString } from 'class-validator';
+import {
+  IsDate,
+  IsDateString,
+  IsInt,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 
 export class CreateBookingDto {
   @IsInt()

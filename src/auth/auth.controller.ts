@@ -1,8 +1,19 @@
-import { Controller, Post, Get, Body, Param, UseGuards, Request, Query, Put, Patch } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  Param,
+  UseGuards,
+  Request,
+  Query,
+  Put,
+  Patch,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { RolesGuard } from 'src/common/decoraters/roles.guard';
-import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard'
+import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { Roles } from 'src/common/decoraters/roles.decorator';
 import { PaginationQueryDto } from 'src/common/dto/paginationquery.dto';
 import { UpdateUserDto } from 'src/user/dto/update-user.dto';
@@ -12,14 +23,12 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private authservice: AuthService) { }
-
+  constructor(private authservice: AuthService) {}
 
   @Post('register')
   register(@Body() registerdto: RegisterDto) {
     return this.authservice.register(registerdto);
   }
-
 
   // @UseGuards(JwtAuthGuard, RolesGuard)
   // @Roles('ADMIN')
@@ -28,12 +37,10 @@ export class AuthController {
     return this.authservice.adminregister(registerdto);
   }
 
-
   @Post('login')
   login(@Body() body: any) {
     return this.authservice.login(body.identifier, body.password); // supports email or phone
   }
-
 
   @Post('logout')
   logout() {
@@ -50,12 +57,9 @@ export class AuthController {
 
   //user specific routes
   @UseGuards(JwtAuthGuard)
-  @Put("profile")
-  async updateUser(
-    @Request() req,
-    @Body() data: UpdateUserDto,
-  ) {
-    const user = req.user.customer_id
+  @Put('profile')
+  async updateUser(@Request() req, @Body() data: UpdateUserDto) {
+    const user = req.user.customer_id;
     return this.authservice.updateUser(user, data);
   }
 
@@ -76,7 +80,6 @@ export class AuthController {
     return this.authservice.resetPassword(dto);
   }
 
-
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
   @Get('users')
@@ -91,9 +94,7 @@ export class AuthController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
   @Get('users/:id')
-  async getUsersbyId(
-    @Param('id') id: number,
-  ) {
+  async getUsersbyId(@Param('id') id: number) {
     return this.authservice.getUsersbyId(id);
   }
 
@@ -110,18 +111,14 @@ export class AuthController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
   @Get('users/:id/bookings')
-  async getAllBookingsOfUsers(
-    @Param('id') id: number,
-  ) {
+  async getAllBookingsOfUsers(@Param('id') id: number) {
     return this.authservice.getAllBookingsOfUsers(id);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
   @Get('users/:id/memorial-profiles')
-  async getAllMemorialProfilesOfUsers(
-    @Param('id') id: number,
-  ) {
+  async getAllMemorialProfilesOfUsers(@Param('id') id: number) {
     return this.authservice.getAllMemorialProfilesOfUsers(id);
   }
 
@@ -144,5 +141,4 @@ export class AuthController {
   ) {
     return this.authservice.getEachMemorialProfilesOfUsers(id, slug);
   }
-
 }

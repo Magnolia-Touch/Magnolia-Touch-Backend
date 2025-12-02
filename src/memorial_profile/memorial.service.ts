@@ -1,15 +1,20 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException, HttpException, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+  HttpException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { S3Service } from '../s3/s3.service';
 import { CreateGuestBookDto } from './dto/create-guestbook.dto';
-import { generateCode } from 'src/utils/code-generator.util'; // adjust path if needed
+import { generateCode, generateUsername } from 'src/utils/code-generator.util'; // adjust path if needed
 import { HttpStatus } from '@nestjs/common';
 import { CreateProfileDto, CheckoutDto } from './dto/create-profile.dto';
 import { MailerService } from '@nestjs-modules/mailer';
 import { StripeService } from 'src/stripe/stripe.service';
-import {
-  generateOrderIdforProduct,
-} from 'src/utils/code-generator.util';
+import { generateOrderIdforProduct } from 'src/utils/code-generator.util';
 import { OrdersService } from 'src/orders/orders.service';
 
 import { Logger } from '@nestjs/common';
@@ -44,172 +49,6 @@ export class MemorialProfileService {
     return `${baseUrl}${path}`;
   }
 
-  // async create(dto: CreateProfileDto,
-  //   email: string,
-  //   user_id: number,
-  //   successUrl?: string,
-  //   cancelUrl?: string) {
-  //   // generate unique slug
-  //   let uniqueSlug = '';
-  //   let isUnique = false;
-  //   while (!isUnique) {
-  //     const tempSlug = generateCode();
-  //     const existing = await this.prisma.deadPersonProfile.findUnique({
-  //       where: { slug: tempSlug },
-  //     });
-  //     if (!existing) {
-  //       uniqueSlug = tempSlug;
-  //       isUnique = true;
-  //     }
-  //   }
-
-  //   // main profile
-  //   const profile = await this.prisma.deadPersonProfile.create({
-  //     data: {
-  //       owner_id: email,
-  //       firstName: dto.firstName,
-  //       lastName: dto.lastName,
-  //       born_date: dto.born_date,
-  //       death_date: dto.death_date,
-  //       memorial_place: dto.memorial_place,
-  //       profile_image: dto.profile_image,
-  //       background_image: dto.background_image,
-  //       is_paid: dto.is_paid ?? false,
-  //       slug: uniqueSlug,
-
-  //       // Nested creates
-  //       biography: {
-  //         create: (dto.biography ?? []).map((b) => ({
-  //           discription: b.discription,
-  //         })),
-  //       },
-  //       gallery: {
-  //         create: (dto.gallery ?? []).map((g) => ({
-  //           link: g.link,
-  //         })),
-  //       },
-  //       family: {
-  //         create: (dto.family ?? []).map((f) => ({
-  //           relationship: f.relationship,
-  //           name: f.name,
-  //         })),
-  //       },
-
-  //       // always create a guestBook
-  //       guestBook: {
-  //         create: {},
-  //       },
-  //       SocialLinks: {
-  //         create: (dto.socialLinks ?? []).map((s) => ({
-  //           socialMediaName: s.socialMediaName, // undefined if not provided
-  //           link: s.link,
-  //         })),
-  //       },
-  //       Events: {
-  //         create: (dto.events ?? []).map((e) => ({
-  //           year: e.year,
-  //           event: e.event,
-  //         })),
-  //       },
-  //     },
-  //     include: {
-  //       biography: true,
-  //       gallery: true,
-  //       family: true,
-  //       guestBook: { include: { guestBookItems: true } },
-  //       SocialLinks: true,
-  //       Events: true,
-  //     },
-  //   });
-  //   let subtotal = 100;
-  //   let product: any | null = null;
-  //   //setup payment urls
-  //   let shippingAddress: any | null = null;
-  //   let billingAddress: any | null = null;
-  //   let church: any | null = null;
-  //   if (dto.billingaddressId) {
-  //     billingAddress = await this.prisma.billingAddress.findUnique({ where: { bill_address_id: Number(dto.billingaddressId) } })
-  //   }
-  //   if (dto.shippingaddressId) {
-  //     shippingAddress = await this.prisma.userAddress.findUnique({ where: { deli_address_id: Number(dto.shippingaddressId) } })
-  //   }
-  //   else if (dto.church_id) {
-  //     church = await this.prisma.church.findUnique({ where: { church_id: Number(dto.church_id) } })
-  //   }
-
-  //   let OrderCreated: any;
-  //   try {
-  //     //hardcode for demo
-  //     subtotal = product ? Number(product.price) : 100; // fallback ₹100 / $1.00
-  //     // 2️⃣ Ensure subtotal > 0
-
-  //     // 1️⃣ Create Order in DB
-  //     const order = await this.orderservice.create({
-  //       User_id: user_id,
-  //       orderNumber: generateOrderIdforProduct(),
-  //       status: 'pending',
-  //       totalAmount: subtotal,
-  //       shippingAddressId: Number(dto.shippingaddressId) ?? null,
-  //       billingAddressId: Number(dto.billingaddressId) ?? null,
-  //       church_id: Number(dto.church_id) ?? null,
-  //       memoryProfileId: profile.slug,
-  //       tracking_details: undefined,
-  //       delivery_agent_id: undefined,
-  //     });
-  //     if (subtotal <= 0) {
-  //       throw new Error('Subtotal must be greater than 0 to create a payment intent');
-  //     }
-
-
-  //     const checkoutSession = await this.stripeService.createCheckoutLinkForExistingOrder(
-  //       order,
-  //       email,
-  //       successUrl || this.getDefaultUrl('/booking/success'),
-  //       cancelUrl || this.getDefaultUrl('/booking/cancel')
-  //     );
-
-  //     OrderCreated = {
-  //       id: order.id,
-  //       orderNumber: order.orderNumber,
-  //       memoryProfile: `http://localhost:3000/memories?code=${profile.slug}`,
-  //       shipping_name: shippingAddress?.Name ?? '',
-  //       shipping_street: shippingAddress?.street ?? '',
-  //       shipping_city: shippingAddress?.town_or_city ?? '',
-  //       shipping_country: shippingAddress?.country ?? '',
-  //       shipping_postcode: shippingAddress?.postcode ?? '',
-  //       billing_name: billingAddress?.Name ?? '',
-  //       billing_street: billingAddress?.street ?? '',
-  //       billing_city: billingAddress?.town_or_city ?? '',
-  //       billing_country: billingAddress?.country ?? '',
-  //       billing_postcode: billingAddress?.postcode ?? '',
-  //       church_name: church?.name ?? '',
-  //       church_city: church?.city ?? '',
-  //       church_state: church?.state ?? '',
-  //       church_address: church?.address ?? '',
-  //       amount: order.totalAmount,
-  //       status: order.status,
-  //       is_bought: order.is_paid,
-  //       checkout_url: checkoutSession.url!,
-  //       session_id: checkoutSession.id,
-  //       payment_status: checkoutSession.payment_status || 'pending',
-  //       expires_at: checkoutSession.expires_at
-  //         ? new Date(checkoutSession.expires_at * 1000).toISOString()
-  //         : undefined,
-  //     };
-  //   } catch (error) {
-  //     this.logger.error('Failed to create PaymentIntent', error.stack);
-  //     throw error;
-  //   }
-  //   // Return response only for the first booking
-  //   return {
-  //     message: `Order created successfully with checkout link (Created ${OrderCreated.orderNumber} order internally)`,
-  //     booking: OrderCreated, profile,
-  //     status: HttpStatus.OK,
-  //   };
-
-  // }
-
-
   async getProfile(slug: string) {
     const profile = await this.prisma.deadPersonProfile.findUnique({
       where: { slug },
@@ -219,7 +58,7 @@ export class MemorialProfileService {
         gallery: true,
         guestBook: true,
         Events: true,
-        SocialLinks: true
+        SocialLinks: true,
       },
     });
 
@@ -234,8 +73,12 @@ export class MemorialProfileService {
     };
   }
 
-
-  async getProfileList(email: string, page: number, limit: number, search?: string) {
+  async getProfileList(
+    email: string,
+    page: number,
+    limit: number,
+    search?: string,
+  ) {
     const skip = (page - 1) * limit;
 
     const whereCondition: any = {
@@ -296,21 +139,36 @@ export class MemorialProfileService {
     };
   }
 
-
-  async addGuestbook(slug: string, dto: CreateGuestBookDto, image: Express.Multer.File) {
+  async addGuestbook(
+    slug: string,
+    dto: CreateGuestBookDto,
+    image: Express.Multer.File,
+  ) {
     const { first_name, last_name, guestemail, phone, message } = dto;
     let imageUrl: string | null = null;
     if (image) {
       // Upload image to S3
-      const allowedImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      const allowedImageTypes = [
+        'image/jpeg',
+        'image/png',
+        'image/gif',
+        'image/webp',
+      ];
       if (!this.s3Service.validateFileType(image, allowedImageTypes)) {
-        throw new BadRequestException('Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed.');
+        throw new BadRequestException(
+          'Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed.',
+        );
       }
       const maxSize = 5 * 1024 * 1024; // 5MB
       if (!this.s3Service.validateFileSize(image, maxSize)) {
-        throw new BadRequestException('File size too large. Maximum size is 5MB.');
+        throw new BadRequestException(
+          'File size too large. Maximum size is 5MB.',
+        );
       }
-      imageUrl = await this.s3Service.uploadFile(image, `guestbook/${slug}/images`);
+      imageUrl = await this.s3Service.uploadFile(
+        image,
+        `guestbook/${slug}/images`,
+      );
     }
     const date = new Date().toISOString(); // Get current date in ISO format
     const profile = await this.prisma.deadPersonProfile.findUnique({
@@ -333,7 +191,7 @@ export class MemorialProfileService {
         phone: phone,
         photo_upload: imageUrl,
         date: date,
-        is_approved: false
+        is_approved: false,
       },
     });
 
@@ -344,7 +202,7 @@ export class MemorialProfileService {
       await this.sendProfileOwnerNotification(
         profileOwnerEmail,
         visitorName,
-        profile.firstName || profile.lastName || "owner name" // adjust based on your DB field
+        profile.firstName || profile.lastName || 'owner name', // adjust based on your DB field
       );
     }
     return {
@@ -353,7 +211,6 @@ export class MemorialProfileService {
       status: HttpStatus.CREATED,
     };
   }
-
 
   async getGuestBookApproved(
     slug: string,
@@ -364,7 +221,7 @@ export class MemorialProfileService {
     // find profile first
     const profile = await this.prisma.guestBook.findFirst({
       where: { deadPersonProfiles: slug },
-      include: { profile: { select: { owner_id: true } } }
+      include: { profile: { select: { owner_id: true } } },
     });
 
     if (!profile) {
@@ -436,13 +293,15 @@ export class MemorialProfileService {
       throw new NotFoundException('Profile not found');
     }
     if (email !== profile.owner_id) {
-      throw new ForbiddenException('You are not authorized to view this guestbook');
+      throw new ForbiddenException(
+        'You are not authorized to view this guestbook',
+      );
     }
 
     // ✅ find guestbook
     const guestbook = await this.prisma.guestBook.findFirst({
       where: { deadPersonProfiles: slug },
-      include: { profile: { select: { owner_id: true } } }
+      include: { profile: { select: { owner_id: true } } },
     });
     if (!guestbook) {
       throw new NotFoundException('Guestbook not found for this profile');
@@ -497,7 +356,6 @@ export class MemorialProfileService {
     };
   }
 
-
   async updateGuestBook(email: string, slug: string, id: number) {
     const profile = await this.prisma.deadPersonProfile.findUnique({
       where: { slug },
@@ -510,13 +368,15 @@ export class MemorialProfileService {
       throw new NotFoundException('Profile not found');
     }
     if (email != profile.owner_id) {
-      throw new ForbiddenException('You are not authorized to view this guestbook');
+      throw new ForbiddenException(
+        'You are not authorized to view this guestbook',
+      );
     }
     const guestbook = await this.prisma.guestBook.findFirst({
       where: { deadPersonProfiles: slug },
       include: {
-        guestBookItems: true
-      }
+        guestBookItems: true,
+      },
     });
     if (!guestbook) {
       throw new NotFoundException('Guestbook not found for this profile');
@@ -529,7 +389,7 @@ export class MemorialProfileService {
       data: {
         is_approved: true,
       },
-    })
+    });
 
     return {
       message: 'GuestMessage Approved Succesfully',
@@ -549,13 +409,15 @@ export class MemorialProfileService {
       throw new NotFoundException('Gallery not found for this profile');
     }
     if (email != profile.owner_id) {
-      throw new ForbiddenException('You are not authorized to view this guestbook');
+      throw new ForbiddenException(
+        'You are not authorized to view this guestbook',
+      );
     }
     const guestbook = await this.prisma.guestBook.findFirst({
       where: { deadPersonProfiles: slug },
       include: {
-        guestBookItems: true
-      }
+        guestBookItems: true,
+      },
     });
     if (!guestbook) {
       throw new NotFoundException('Guestbook not found for this profile');
@@ -574,7 +436,10 @@ export class MemorialProfileService {
       try {
         await this.s3Service.deleteFile(guestbookItem.photo_upload);
       } catch (error) {
-        console.warn('Failed to delete guestbook photo from S3:', error.message);
+        console.warn(
+          'Failed to delete guestbook photo from S3:',
+          error.message,
+        );
       }
     }
 
@@ -583,7 +448,7 @@ export class MemorialProfileService {
         guestbookitems_id: id,
         guestbook_id: guestbook.guestbook_id,
       },
-    })
+    });
 
     return {
       message: 'GuestBook item deleted successfully',
@@ -591,28 +456,32 @@ export class MemorialProfileService {
     };
   }
 
-
-
   // This method is deprecated - use uploadMedia instead
-  async addGalleryItems(email: string, slug: string, mediatype: string, image: Express.Multer.File) {
+  async addGalleryItems(
+    email: string,
+    slug: string,
+    mediatype: string,
+    image: Express.Multer.File,
+  ) {
     // Redirect to the new S3-integrated method
     if (mediatype === 'photos' || mediatype === 'videos') {
       return this.uploadMedia(email, slug, mediatype, image);
     } else if (mediatype === 'links') {
-      throw new BadRequestException('Links cannot be uploaded as files. Please use a different endpoint to add link URLs.');
+      throw new BadRequestException(
+        'Links cannot be uploaded as files. Please use a different endpoint to add link URLs.',
+      );
     } else {
       throw new BadRequestException(`Invalid mediatype: ${mediatype}`);
     }
   }
-
 
   async getGallery(slug: string) {
     const profile = await this.prisma.deadPersonProfile.findUnique({
       where: { slug },
       include: {
         gallery: {
-          select: { link: true }
-        }
+          select: { link: true },
+        },
       },
     });
 
@@ -641,7 +510,9 @@ export class MemorialProfileService {
       throw new NotFoundException('Gallery not found for this profile');
     }
     if (email !== profile.owner_id) {
-      throw new ForbiddenException('You are not authorized to view this guestbook');
+      throw new ForbiddenException(
+        'You are not authorized to view this guestbook',
+      );
     }
     const gallery_id = profile.gallery[0].gallery_id;
     const validmedia = ['links', 'photos', 'videos'];
@@ -695,28 +566,44 @@ export class MemorialProfileService {
   }
 
   // New S3-integrated methods
-  async uploadProfileImage(email: string, slug: string, type: 'profile' | 'background', file: Express.Multer.File) {
+  async uploadProfileImage(
+    email: string,
+    slug: string,
+    type: 'profile' | 'background',
+    file: Express.Multer.File,
+  ) {
     // Validate file type
-    const allowedImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    const allowedImageTypes = [
+      'image/jpeg',
+      'image/png',
+      'image/gif',
+      'image/webp',
+    ];
     if (!this.s3Service.validateFileType(file, allowedImageTypes)) {
-      throw new BadRequestException('Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed.');
+      throw new BadRequestException(
+        'Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed.',
+      );
     }
 
     // Validate file size (5MB limit)
     const maxSize = 5 * 1024 * 1024; // 5MB
     if (!this.s3Service.validateFileSize(file, maxSize)) {
-      throw new BadRequestException('File size too large. Maximum size is 5MB.');
+      throw new BadRequestException(
+        'File size too large. Maximum size is 5MB.',
+      );
     }
 
     // Check if user owns the profile
     const profile = await this.prisma.deadPersonProfile.findUnique({
-      where: { slug }
+      where: { slug },
     });
     if (!profile) {
       throw new NotFoundException('Profile not found');
     }
     if (email !== profile.owner_id) {
-      throw new ForbiddenException('You are not authorized to update this profile');
+      throw new ForbiddenException(
+        'You are not authorized to update this profile',
+      );
     }
 
     // Upload to S3
@@ -724,7 +611,8 @@ export class MemorialProfileService {
     const imageUrl = await this.s3Service.uploadFile(file, folder);
 
     // Delete old image from S3 if it exists
-    const oldImageUrl = type === 'profile' ? profile.profile_image : profile.background_image;
+    const oldImageUrl =
+      type === 'profile' ? profile.profile_image : profile.background_image;
     if (oldImageUrl) {
       try {
         await this.s3Service.deleteFile(oldImageUrl);
@@ -734,9 +622,10 @@ export class MemorialProfileService {
     }
 
     // Update profile with new image URL
-    const updateData = type === 'profile'
-      ? { profile_image: imageUrl }
-      : { background_image: imageUrl };
+    const updateData =
+      type === 'profile'
+        ? { profile_image: imageUrl }
+        : { background_image: imageUrl };
 
     const updatedProfile = await this.prisma.deadPersonProfile.update({
       where: { slug },
@@ -750,11 +639,18 @@ export class MemorialProfileService {
     };
   }
 
-  async uploadMedia(email: string, slug: string, mediatype: string, file: Express.Multer.File) {
+  async uploadMedia(
+    email: string,
+    slug: string,
+    mediatype: string,
+    file: Express.Multer.File,
+  ) {
     // Validate mediatype
     const validMediaTypes = ['photos', 'videos'];
     if (!validMediaTypes.includes(mediatype.toLowerCase())) {
-      throw new BadRequestException('Invalid mediatype. Only photos and videos are supported for file uploads.');
+      throw new BadRequestException(
+        'Invalid mediatype. Only photos and videos are supported for file uploads.',
+      );
     }
 
     // Validate file type based on mediatype
@@ -762,7 +658,13 @@ export class MemorialProfileService {
     if (mediatype.toLowerCase() === 'photos') {
       allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
     } else {
-      allowedTypes = ['video/mp4', 'video/avi', 'video/mov', 'video/wmv', 'video/flv'];
+      allowedTypes = [
+        'video/mp4',
+        'video/avi',
+        'video/mov',
+        'video/wmv',
+        'video/flv',
+      ];
     }
 
     if (!this.s3Service.validateFileType(file, allowedTypes)) {
@@ -770,9 +672,14 @@ export class MemorialProfileService {
     }
 
     // Validate file size (50MB for videos, 10MB for photos)
-    const maxSize = mediatype.toLowerCase() === 'videos' ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
+    const maxSize =
+      mediatype.toLowerCase() === 'videos'
+        ? 50 * 1024 * 1024
+        : 10 * 1024 * 1024;
     if (!this.s3Service.validateFileSize(file, maxSize)) {
-      throw new BadRequestException(`File size too large. Maximum size is ${mediatype.toLowerCase() === 'videos' ? '50MB' : '10MB'}.`);
+      throw new BadRequestException(
+        `File size too large. Maximum size is ${mediatype.toLowerCase() === 'videos' ? '50MB' : '10MB'}.`,
+      );
     }
 
     // Check authorization
@@ -784,7 +691,9 @@ export class MemorialProfileService {
       throw new NotFoundException('Gallery not found for this profile');
     }
     if (email !== profile.owner_id) {
-      throw new ForbiddenException('You are not authorized to upload media to this profile');
+      throw new ForbiddenException(
+        'You are not authorized to upload media to this profile',
+      );
     }
 
     // Upload to S3
@@ -810,7 +719,12 @@ export class MemorialProfileService {
     };
   }
 
-  async uploadMultipleMedia(email: string, slug: string, mediatype: string, files: Express.Multer.File[]) {
+  async uploadMultipleMedia(
+    email: string,
+    slug: string,
+    mediatype: string,
+    files: Express.Multer.File[],
+  ) {
     if (!files || files.length === 0) {
       throw new BadRequestException('No files provided');
     }
@@ -818,7 +732,9 @@ export class MemorialProfileService {
     // Validate mediatype
     const validMediaTypes = ['photos', 'videos'];
     if (!validMediaTypes.includes(mediatype.toLowerCase())) {
-      throw new BadRequestException('Invalid mediatype. Only photos and videos are supported for file uploads.');
+      throw new BadRequestException(
+        'Invalid mediatype. Only photos and videos are supported for file uploads.',
+      );
     }
 
     // Check authorization
@@ -830,7 +746,9 @@ export class MemorialProfileService {
       throw new NotFoundException('Gallery not found for this profile');
     }
     if (email !== profile.owner_id) {
-      throw new ForbiddenException('You are not authorized to upload media to this profile');
+      throw new ForbiddenException(
+        'You are not authorized to upload media to this profile',
+      );
     }
 
     // Validate all files
@@ -838,23 +756,39 @@ export class MemorialProfileService {
     if (mediatype.toLowerCase() === 'photos') {
       allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
     } else {
-      allowedTypes = ['video/mp4', 'video/avi', 'video/mov', 'video/wmv', 'video/flv'];
+      allowedTypes = [
+        'video/mp4',
+        'video/avi',
+        'video/mov',
+        'video/wmv',
+        'video/flv',
+      ];
     }
 
-    const maxSize = mediatype.toLowerCase() === 'videos' ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
+    const maxSize =
+      mediatype.toLowerCase() === 'videos'
+        ? 50 * 1024 * 1024
+        : 10 * 1024 * 1024;
 
     for (const file of files) {
       if (!this.s3Service.validateFileType(file, allowedTypes)) {
-        throw new BadRequestException(`Invalid file type for ${file.originalname}. Expected ${mediatype}.`);
+        throw new BadRequestException(
+          `Invalid file type for ${file.originalname}. Expected ${mediatype}.`,
+        );
       }
       if (!this.s3Service.validateFileSize(file, maxSize)) {
-        throw new BadRequestException(`File ${file.originalname} is too large.`);
+        throw new BadRequestException(
+          `File ${file.originalname} is too large.`,
+        );
       }
     }
 
     // Upload all files to S3
     const folder = `profiles/${slug}/gallery/${mediatype}`;
-    const uploadedUrls = await this.s3Service.uploadMultipleFiles(files, folder);
+    const uploadedUrls = await this.s3Service.uploadMultipleFiles(
+      files,
+      folder,
+    );
 
     // Save all to database
     const gallery_id = profile.gallery[0].gallery_id;
@@ -879,7 +813,6 @@ export class MemorialProfileService {
     };
   }
 
-
   // dead-person-profile.service.ts
   async addGuestbookWithPhoto(
     slug: string,
@@ -901,7 +834,7 @@ export class MemorialProfileService {
       throw new NotFoundException('Guestbook not found for this profile');
     }
 
-    let photoUrl: string | null = null;
+    const photoUrl: string | null = null;
 
     // upload image (same as your code)...
 
@@ -927,7 +860,7 @@ export class MemorialProfileService {
       await this.sendProfileOwnerNotification(
         profileOwnerEmail,
         visitorName,
-        profile.firstName || profile.lastName || "name" // adjust based on your DB field
+        profile.firstName || profile.lastName || 'name', // adjust based on your DB field
       );
     }
 
@@ -937,7 +870,6 @@ export class MemorialProfileService {
       status: HttpStatus.CREATED,
     };
   }
-
 
   async getAllMemoryProfile(query: any) {
     // pagination
@@ -1014,8 +946,6 @@ export class MemorialProfileService {
     };
   }
 
-
-
   // dead-person-profile.service.ts
   async getMemoryProfileById(id: string) {
     const profile = await this.prisma.deadPersonProfile.findUnique({
@@ -1026,8 +956,8 @@ export class MemorialProfileService {
         family: true,
         Events: true,
         gallery: true,
-        guestBook: true
-      }
+        guestBook: true,
+      },
     });
 
     if (!profile) {
@@ -1041,16 +971,20 @@ export class MemorialProfileService {
     };
   }
 
-  async sendProfileOwnerNotification(ownerEmail: string, visitorName: string, profileName: string) {
+  async sendProfileOwnerNotification(
+    ownerEmail: string,
+    visitorName: string,
+    profileName: string,
+  ) {
     const subject = `New Memory Shared on ${profileName}`;
     await this.emailService.sendMail({
       to: ownerEmail,
       subject,
-      template: "memoryNotification",
+      template: 'memoryNotification',
       context: {
         visitorName,
-        profileName
-      }
+        profileName,
+      },
     });
   }
 
@@ -1088,7 +1022,6 @@ export class MemorialProfileService {
       },
     });
 
-
     // 3. Cleaning services scheduled on that date (unique by bkng_parent_id)
     const todayCleaningServiceCount = await this.prisma.booking.count({
       where: {
@@ -1122,15 +1055,28 @@ export class MemorialProfileService {
   }
 
 
+  async checkUserExists(username: string): Promise<boolean> {
+    const user = await this.prisma.deadPersonProfile.findUnique({
+      where: { slug: username },
+    });
+
+    const userDraft = await this.prisma.deadPersonProfileDraft.findUnique({
+      where: { slug: username },
+    });
+
+    return !!user || !!userDraft;
+  }
+
+
   async saveDraftProfile(
     dto: CreateProfileDto,
     email: string,
     user_id: number,
-    existingSlug?: string,       // If provided → update draft
+    existingSlug?: string, // If provided → update draft
   ) {
     // If user gave slug → try to update an existing draft
     let profile: any = null;
-    console.log(existingSlug)
+    console.log(existingSlug);
     if (existingSlug) {
       profile = await this.prisma.deadPersonProfileDraft.findUnique({
         where: { slug: existingSlug, owner_id: email },
@@ -1144,9 +1090,9 @@ export class MemorialProfileService {
       });
 
       if (!profile) {
-        throw new BadRequestException("Draft profile not found");
+        throw new BadRequestException('Draft profile not found');
       }
-      console.log(dto.profile_image)
+      console.log(dto.profile_image);
       // ---------- UPDATE DRAFT ------------------
       const updated = await this.prisma.deadPersonProfileDraft.update({
         where: { slug: existingSlug },
@@ -1158,7 +1104,7 @@ export class MemorialProfileService {
           memorial_place: dto.memorial_place ?? profile.memorial_place,
           profile_image:
             dto.profile_image === undefined
-              ? null                                // user intentionally removed image
+              ? null // user intentionally removed image
               : (dto.profile_image ?? profile.profile_image), // keep or replace
 
           background_image:
@@ -1168,39 +1114,40 @@ export class MemorialProfileService {
           is_paid: false, // Always false for draft
 
           // Overwrite nested arrays
-          biography: dto.biography && dto.biography.length > 0
-            ? {
-              upsert: {
-                update: {
-                  description: dto.biography[0].discription,
+          biography:
+            dto.biography && dto.biography.length > 0
+              ? {
+                upsert: {
+                  update: {
+                    description: dto.biography[0].discription,
+                  },
+                  create: {
+                    description: dto.biography[0].discription,
+                  },
                 },
-                create: {
-                  description: dto.biography[0].discription,
-                },
-              },
-            }
-            : undefined,
+              }
+              : undefined,
 
           gallery: {
-            create: (dto.gallery ?? []).map(g => ({ link: g.link })),
+            create: (dto.gallery ?? []).map((g) => ({ link: g.link })),
           },
           family: {
             deleteMany: {},
-            create: (dto.family ?? []).map(f => ({
+            create: (dto.family ?? []).map((f) => ({
               relationship: f.relationship,
               name: f.name,
             })),
           },
           socialLinks: {
             deleteMany: {},
-            create: (dto.socialLinks ?? []).map(s => ({
+            create: (dto.socialLinks ?? []).map((s) => ({
               socialMediaName: s.socialMediaName,
               link: s.link,
             })),
           },
           events: {
             deleteMany: {},
-            create: (dto.events ?? []).map(e => ({
+            create: (dto.events ?? []).map((e) => ({
               year: e.year,
               event: e.event,
             })),
@@ -1216,18 +1163,28 @@ export class MemorialProfileService {
       });
 
       return {
-        message: "Draft updated successfully",
+        message: 'Draft updated successfully',
         draft: updated,
       };
     }
 
     // ---------- CREATE NEW DRAFT ---------------
     // Create unique slug
-    let slug = "";
+    let slug = '';
     let ok = false;
-
+    let temp;
     while (!ok) {
-      const temp = generateCode();
+      if (dto.firstName && dto.death_date) {
+        temp = await generateUsername(
+          dto.firstName,
+          dto.death_date,
+          this.checkUserExists.bind(this)   // 👈 FIX HERE
+        );
+      }
+      else {
+        temp = generateCode();
+      }
+
       const exists = await this.prisma.deadPersonProfileDraft.findUnique({
         where: { slug: temp, owner_id: email },
       });
@@ -1262,22 +1219,22 @@ export class MemorialProfileService {
             : undefined,
 
         gallery: {
-          create: (dto.gallery ?? []).map(g => ({ link: g.link })),
+          create: (dto.gallery ?? []).map((g) => ({ link: g.link })),
         },
         family: {
-          create: (dto.family ?? []).map(f => ({
+          create: (dto.family ?? []).map((f) => ({
             relationship: f.relationship,
             name: f.name,
           })),
         },
         socialLinks: {
-          create: (dto.socialLinks ?? []).map(s => ({
+          create: (dto.socialLinks ?? []).map((s) => ({
             socialMediaName: s.socialMediaName,
             link: s.link,
           })),
         },
         events: {
-          create: (dto.events ?? []).map(e => ({
+          create: (dto.events ?? []).map((e) => ({
             year: e.year,
             event: e.event,
           })),
@@ -1286,14 +1243,21 @@ export class MemorialProfileService {
     });
 
     return {
-      message: "Draft created successfully",
+      message: 'Draft created successfully',
       draft: { ...newDraft },
     };
   }
 
-
   async submitDraft(email: string, user_id: number, dto: CheckoutDto) {
-    const { slug, shippingaddressId, billingaddressId, church_id, currency, successUrl, cancelUrl } = dto
+    const {
+      slug,
+      shippingaddressId,
+      billingaddressId,
+      church_id,
+      currency,
+      successUrl,
+      cancelUrl,
+    } = dto;
     // 1️⃣ Fetch draft
     const draft = await this.prisma.deadPersonProfileDraft.findUnique({
       where: { slug },
@@ -1307,16 +1271,18 @@ export class MemorialProfileService {
     });
 
     if (!draft) {
-      throw new BadRequestException("Draft not found");
+      throw new BadRequestException('Draft not found');
     }
 
     // 2️⃣ Generate new slug for final profile
-    let uniqueSlug = "";
+    let uniqueSlug = '';
     let ok = false;
 
     while (!ok) {
       const temp = generateCode();
-      const exists = await this.prisma.deadPersonProfile.findUnique({ where: { slug: temp } });
+      const exists = await this.prisma.deadPersonProfile.findUnique({
+        where: { slug: temp },
+      });
       if (!exists) {
         uniqueSlug = temp;
         ok = true;
@@ -1341,53 +1307,57 @@ export class MemorialProfileService {
           ? {
             create: {
               description: draft.biography.description ?? null,
-            }
+            },
           }
           : undefined,
 
-
         gallery: {
-          create: draft.gallery.map(g => ({ link: g.link }))
+          create: draft.gallery.map((g) => ({ link: g.link })),
         },
         family: {
-          create: draft.family.map(f => ({
+          create: draft.family.map((f) => ({
             name: f.name,
-            relationship: f.relationship
-          }))
+            relationship: f.relationship,
+          })),
         },
         SocialLinks: {
-          create: draft.socialLinks.map(s => ({
+          create: draft.socialLinks.map((s) => ({
             socialMediaName: s.socialMediaName,
-            link: s.link
-          }))
+            link: s.link,
+          })),
         },
         Events: {
-          create: draft.events.map(e => ({
+          create: draft.events.map((e) => ({
             year: e.year,
-            event: e.event
-          }))
+            event: e.event,
+          })),
         },
 
         guestBook: {
-          create: {}
-        }
-      }
+          create: {},
+        },
+      },
     });
     let subtotal = 100;
-    let product: any | null = null;
+    const product: any | null = null;
 
     let shippingAddress: any | null = null;
     let billingAddress: any | null = null;
     let church: any | null = null;
 
     if (dto.billingaddressId) {
-      billingAddress = await this.prisma.billingAddress.findUnique({ where: { bill_address_id: Number(dto.billingaddressId) } })
+      billingAddress = await this.prisma.billingAddress.findUnique({
+        where: { bill_address_id: Number(dto.billingaddressId) },
+      });
     }
     if (dto.shippingaddressId) {
-      shippingAddress = await this.prisma.userAddress.findUnique({ where: { deli_address_id: Number(dto.shippingaddressId) } })
-    }
-    else if (dto.church_id) {
-      church = await this.prisma.church.findUnique({ where: { church_id: Number(dto.church_id) } })
+      shippingAddress = await this.prisma.userAddress.findUnique({
+        where: { deli_address_id: Number(dto.shippingaddressId) },
+      });
+    } else if (dto.church_id) {
+      church = await this.prisma.church.findUnique({
+        where: { church_id: Number(dto.church_id) },
+      });
     }
     let OrderCreated: any;
 
@@ -1410,16 +1380,18 @@ export class MemorialProfileService {
         delivery_agent_id: undefined,
       });
       if (subtotal <= 0) {
-        throw new Error('Subtotal must be greater than 0 to create a payment intent');
+        throw new Error(
+          'Subtotal must be greater than 0 to create a payment intent',
+        );
       }
 
-
-      const checkoutSession = await this.stripeService.createCheckoutLinkForExistingOrder(
-        order,
-        email,
-        successUrl || this.getDefaultUrl('/booking/success'),
-        cancelUrl || this.getDefaultUrl('/booking/cancel')
-      );
+      const checkoutSession =
+        await this.stripeService.createCheckoutLinkForExistingOrder(
+          order,
+          email,
+          successUrl || this.getDefaultUrl('/booking/success'),
+          cancelUrl || this.getDefaultUrl('/booking/cancel'),
+        );
 
       OrderCreated = {
         id: order.id,
@@ -1483,11 +1455,11 @@ export class MemorialProfileService {
       });
     });
 
-
     // Return response only for the first booking
     return {
       message: `Order created successfully with checkout link (Created ${OrderCreated.orderNumber} order internally)`,
-      booking: OrderCreated, profile,
+      booking: OrderCreated,
+      profile,
       status: HttpStatus.OK,
     };
   }
@@ -1592,23 +1564,22 @@ export class MemorialProfileService {
     });
   }
 
-
   // Update profile picture
   async updateProfileImage(slug: string, email: string, url: string) {
     const profile = await this.prisma.deadPersonProfile.findFirst({
       where: {
         slug,
-        owner_id: email
-      }
+        owner_id: email,
+      },
     });
 
     if (!profile) {
-      throw new UnauthorizedException("Not authorized to edit this profile");
+      throw new UnauthorizedException('Not authorized to edit this profile');
     }
 
     return this.prisma.deadPersonProfile.update({
       where: { profile_id: profile.profile_id },
-      data: { profile_image: url }
+      data: { profile_image: url },
     });
   }
 
@@ -1617,20 +1588,19 @@ export class MemorialProfileService {
     const profile = await this.prisma.deadPersonProfile.findFirst({
       where: {
         slug,
-        owner_id: email
-      }
+        owner_id: email,
+      },
     });
 
     if (!profile) {
-      throw new UnauthorizedException("Not authorized to edit this profile");
+      throw new UnauthorizedException('Not authorized to edit this profile');
     }
 
     return this.prisma.deadPersonProfile.update({
       where: { profile_id: profile.profile_id },
-      data: { background_image: url }
+      data: { background_image: url },
     });
   }
-
 
   async getDraftBySlug(slug: string, email: string, user_id: number) {
     const draft = await this.prisma.deadPersonProfileDraft.findUnique({
@@ -1645,19 +1615,117 @@ export class MemorialProfileService {
     });
 
     if (!draft) {
-      throw new NotFoundException("Draft not found");
+      throw new NotFoundException('Draft not found');
     }
 
     // Ownership check → only owner can access it
     if (draft.owner_id !== email) {
-      throw new ForbiddenException("You are not allowed to access this draft");
+      throw new ForbiddenException('You are not allowed to access this draft');
     }
 
     return {
-      message: "Draft fetched successfully",
+      message: 'Draft fetched successfully',
       draft,
     };
   }
 
+  async updateDeadPersonProfile(
+    dto: CreateProfileDto,
+    email: string,
+    user_id: number,
+    existingSlug: string,
+  ) {
+    let profile: any = null;
 
+    //fetch the profile.
+    profile = await this.prisma.deadPersonProfile.findUnique({
+      where: { slug: existingSlug, owner_id: email },
+      include: {
+        biography: true,
+        gallery: true,
+        family: true,
+        SocialLinks: true,
+        Events: true,
+      },
+    });
+
+    //throw error if profile not found.
+    if (!profile) {
+      throw new BadRequestException('Draft profile not found');
+    }
+
+    // ---------- UPDATE PROFILE ------------------
+    const updated = await this.prisma.deadPersonProfile.update({
+      where: { slug: existingSlug },
+      data: {
+        firstName: dto.firstName ?? profile.firstName,
+        lastName: dto.lastName ?? profile.lastName,
+        born_date: dto.born_date ?? profile.born_date,
+        death_date: dto.death_date ?? profile.death_date,
+        memorial_place: dto.memorial_place ?? profile.memorial_place,
+        profile_image:
+          dto.profile_image === undefined
+            ? null // user intentionally removed image
+            : (dto.profile_image ?? profile.profile_image), // keep or replace
+
+        background_image:
+          dto.background_image == undefined
+            ? null
+            : (dto.background_image ?? profile.background_image),
+        is_paid: false, // Always false for draft
+
+        // Overwrite nested arrays
+        biography:
+          dto.biography && dto.biography.length > 0
+            ? {
+              upsert: {
+                update: {
+                  description: dto.biography[0].discription,
+                },
+                create: {
+                  description: dto.biography[0].discription,
+                },
+              },
+            }
+            : undefined,
+
+        gallery: {
+          create: (dto.gallery ?? []).map((g) => ({ link: g.link })),
+        },
+        family: {
+          deleteMany: {},
+          create: (dto.family ?? []).map((f) => ({
+            relationship: f.relationship,
+            name: f.name,
+          })),
+        },
+        SocialLinks: {
+          deleteMany: {},
+          create: (dto.socialLinks ?? []).map((s) => ({
+            socialMediaName: s.socialMediaName,
+            link: s.link,
+          })),
+        },
+        Events: {
+          deleteMany: {},
+          create: (dto.events ?? []).map((e) => ({
+            year: e.year,
+            event: e.event,
+          })),
+        },
+      },
+      include: {
+        biography: true,
+        gallery: true,
+        family: true,
+        SocialLinks: true,
+        Events: true,
+      },
+    });
+
+    return {
+      message: 'Profile updated successfully',
+      draft: updated,
+    };
+  }
 }

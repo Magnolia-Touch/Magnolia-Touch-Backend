@@ -1,5 +1,5 @@
 // dto/create-flower.dto.ts
-import { IsBoolean, IsInt, IsString, } from 'class-validator';
+import { IsBoolean, IsInt, IsString } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 
 export class CreateFlowerDto {
