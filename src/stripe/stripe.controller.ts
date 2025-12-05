@@ -1,4 +1,15 @@
-import { Controller, Post, HttpCode, HttpStatus, Headers, Req, Body, Query, Request, ParseIntPipe } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  HttpCode,
+  HttpStatus,
+  Headers,
+  Req,
+  Body,
+  Query,
+  Request,
+  ParseIntPipe,
+} from '@nestjs/common';
 import { StripeService } from './stripe.service';
 import { UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
@@ -13,21 +24,14 @@ export class StripeController {
   constructor(
     private readonly stripeService: StripeService,
     private readonly prisma: PrismaService,
-  ) { }
+  ) {}
 
   @UseGuards(JwtAuthGuard)
   @Post('create-payment-intent')
-  async createPaymentIntent(
-    @Body() checkoutdto: CheckoutDto,
-    @Request() req,
-  ) {
-    const email = req.user.email
-    const id = req.user.customer_id
-    return this.stripeService.createPaymentIntentforQR(
-      checkoutdto,
-      email,
-      id
-    );
+  async createPaymentIntent(@Body() checkoutdto: CheckoutDto, @Request() req) {
+    const email = req.user.email;
+    const id = req.user.customer_id;
+    return this.stripeService.createPaymentIntentforQR(checkoutdto, email, id);
   }
 
   // @UseGuards(JwtAuthGuard)
@@ -82,7 +86,7 @@ export class StripeController {
 
     // Get booking details to generate booking_ids
     const booking = await this.prisma.booking.findUnique({
-      where: { id: booking_id }
+      where: { id: booking_id },
     });
 
     if (!booking) {

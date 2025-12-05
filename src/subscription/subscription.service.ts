@@ -5,7 +5,7 @@ import { NotFoundException, BadRequestException } from '@nestjs/common';
 
 @Injectable()
 export class SubscriptionService {
-  constructor(private prisma: PrismaService) { }
+  constructor(private prisma: PrismaService) {}
 
   async create(dto: SubscriptionDto) {
     const created = await this.prisma.subscriptionPlan.create({
@@ -14,7 +14,7 @@ export class SubscriptionService {
         Subscription_name: dto.Subscription_name,
         Frequency: dto.Frequency,
         Price: dto.Price,
-        isSubscriptionPlan: dto.isSubscriptionPlan
+        isSubscriptionPlan: dto.isSubscriptionPlan,
       },
     });
 
@@ -85,5 +85,4 @@ export class SubscriptionService {
       status: HttpStatus.OK,
     };
   }
-
 }

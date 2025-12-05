@@ -7,7 +7,7 @@ import { OrderStatus } from '@prisma/client';
 
 @Injectable()
 export class OrdersService {
-  constructor(private prisma: PrismaService) { }
+  constructor(private prisma: PrismaService) {}
 
   async create(createOrderDto: CreateOrderDto) {
     return this.prisma.orders.create({
@@ -45,19 +45,19 @@ export class OrdersService {
     };
   }
 
-
   async findOne(order_number: string, userId: number) {
     const order = await this.prisma.orders.findFirst({
       where: { orderNumber: order_number, User_id: userId }, // must match both id and User_id
     });
 
     if (!order) {
-      throw new NotFoundException(`No order found with ID ${order_number} for this user`);
+      throw new NotFoundException(
+        `No order found with ID ${order_number} for this user`,
+      );
     }
 
     return order;
   }
-
 
   async update(id: string, updateOrderDto: UpdateOrderDto) {
     return this.prisma.orders.update({
@@ -75,7 +75,10 @@ export class OrdersService {
     });
   }
 
-  async updateStatus(order_number: string, updatestatusdto: UpdateOrderStatusDto) {
+  async updateStatus(
+    order_number: string,
+    updatestatusdto: UpdateOrderStatusDto,
+  ) {
     return this.prisma.orders.update({
       where: { orderNumber: order_number },
       data: {
@@ -127,14 +130,14 @@ export class OrdersService {
     };
   }
 
-
-
   async findOneByAdmin(order_number: string) {
     const order = await this.prisma.orders.findFirst({
       where: { orderNumber: order_number }, // must match both id and User_id
     });
     if (!order) {
-      throw new NotFoundException(`No order found with ID ${order_number} for this user`);
+      throw new NotFoundException(
+        `No order found with ID ${order_number} for this user`,
+      );
     }
     return order;
   }
@@ -219,15 +222,10 @@ export class OrdersService {
     });
   }
 
-
   async markOrderAsPaid(id: number) {
     return this.prisma.orders.update({
-      where: { id },   // match numeric primary key
+      where: { id }, // match numeric primary key
       data: { is_paid: true },
     });
   }
-
-
-
-
 }

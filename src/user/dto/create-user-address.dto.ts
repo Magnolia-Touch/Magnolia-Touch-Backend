@@ -22,6 +22,4 @@ export class CreateUserAddressDto {
 
   @IsString()
   email: string;
-
-
 }

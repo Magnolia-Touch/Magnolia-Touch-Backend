@@ -31,10 +31,18 @@ export class WebhookErrorHandlerService {
   ) {
     // Configure retry settings from environment or use defaults
     this.retryConfig = {
-      maxRetries: parseInt(this.configService.get('WEBHOOK_MAX_RETRIES') || '3'),
-      baseDelayMs: parseInt(this.configService.get('WEBHOOK_BASE_DELAY_MS') || '5000'),
-      maxDelayMs: parseInt(this.configService.get('WEBHOOK_MAX_DELAY_MS') || '300000'), // 5 minutes
-      exponentialBackoff: this.configService.get('WEBHOOK_EXPONENTIAL_BACKOFF') === 'true' || true,
+      maxRetries: parseInt(
+        this.configService.get('WEBHOOK_MAX_RETRIES') || '3',
+      ),
+      baseDelayMs: parseInt(
+        this.configService.get('WEBHOOK_BASE_DELAY_MS') || '5000',
+      ),
+      maxDelayMs: parseInt(
+        this.configService.get('WEBHOOK_MAX_DELAY_MS') || '300000',
+      ), // 5 minutes
+      exponentialBackoff:
+        this.configService.get('WEBHOOK_EXPONENTIAL_BACKOFF') === 'true' ||
+        true,
     };
   }
 
@@ -77,9 +85,9 @@ export class WebhookErrorHandlerService {
    * Log failed webhook attempt
    */
   async logFailedAttempt(
-    event: Stripe.Event, 
-    error: any, 
-    retryCount: number = 0
+    event: Stripe.Event,
+    error: any,
+    retryCount: number = 0,
   ): Promise<void> {
     try {
       const errorInfo: WebhookErrorInfo = {
@@ -88,26 +96,29 @@ export class WebhookErrorHandlerService {
         error: error.message || error.toString(),
         retryCount,
         lastAttempt: new Date(),
-        nextRetry: this.shouldRetry(error, retryCount) 
+        nextRetry: this.shouldRetry(error, retryCount)
           ? new Date(Date.now() + this.calculateRetryDelay(retryCount))
           : undefined,
         resolved: false,
       };
 
       this.logger.error(
-        `Webhook failed: ${event.type} (${event.id}) - Attempt ${retryCount + 1}/${this.retryConfig.maxRetries + 1}`
+        `Webhook failed: ${event.type} (${event.id}) - Attempt ${retryCount + 1}/${this.retryConfig.maxRetries + 1}`,
       );
       this.logger.error(`Error: ${error.message || error.toString()}`);
 
       if (errorInfo.nextRetry) {
-        this.logger.log(`Next retry scheduled for: ${errorInfo.nextRetry.toISOString()}`);
+        this.logger.log(
+          `Next retry scheduled for: ${errorInfo.nextRetry.toISOString()}`,
+        );
       } else {
-        this.logger.error(`Max retries exceeded or non-retryable error. Event processing abandoned.`);
+        this.logger.error(
+          `Max retries exceeded or non-retryable error. Event processing abandoned.`,
+        );
       }
 
       // Here you could store webhook failure logs in database
       // await this.prisma.webhookErrorLog.create({ data: errorInfo });
-
     } catch (logError) {
       this.logger.error('Failed to log webhook error:', logError.stack);
     }
@@ -116,9 +127,12 @@ export class WebhookErrorHandlerService {
   /**
    * Log successful webhook processing after retry
    */
-  async logSuccessfulRetry(event: Stripe.Event, retryCount: number): Promise<void> {
+  async logSuccessfulRetry(
+    event: Stripe.Event,
+    retryCount: number,
+  ): Promise<void> {
     this.logger.log(
-      `Webhook successfully processed after ${retryCount + 1} attempts: ${event.type} (${event.id})`
+      `Webhook successfully processed after ${retryCount + 1} attempts: ${event.type} (${event.id})`,
     );
 
     // Update database record if you're storing webhook logs
@@ -132,20 +146,20 @@ export class WebhookErrorHandlerService {
    * Handle critical webhook failures that require immediate attention
    */
   async handleCriticalFailure(
-    event: Stripe.Event, 
-    error: any, 
-    context: string = ''
+    event: Stripe.Event,
+    error: any,
+    context: string = '',
   ): Promise<void> {
     const criticalEvents = [
       'payment_intent.succeeded',
       'payment_intent.payment_failed',
       'invoice.payment_succeeded',
-      'invoice.payment_failed'
+      'invoice.payment_failed',
     ];
 
     if (criticalEvents.includes(event.type)) {
       this.logger.error(
-        `CRITICAL WEBHOOK FAILURE: ${event.type} (${event.id}) ${context}`
+        `CRITICAL WEBHOOK FAILURE: ${event.type} (${event.id}) ${context}`,
       );
       this.logger.error(`Error: ${error.message || error.toString()}`);
 
@@ -154,7 +168,7 @@ export class WebhookErrorHandlerService {
       // 2. Create high-priority support tickets
       // 3. Send SMS notifications
       // 4. Trigger monitoring alerts
-      
+
       await this.notifyAdministrators(event, error, context);
     }
   }
@@ -163,14 +177,14 @@ export class WebhookErrorHandlerService {
    * Notify administrators of critical webhook failures
    */
   private async notifyAdministrators(
-    event: Stripe.Event, 
-    error: any, 
-    context: string
+    event: Stripe.Event,
+    error: any,
+    context: string,
   ): Promise<void> {
     try {
       // Implementation would depend on your notification system
       // Examples:
-      
+
       // 1. Email notification
       // await this.emailService.sendCriticalAlert({
       //   subject: `Critical Webhook Failure: ${event.type}`,
@@ -196,23 +210,32 @@ export class WebhookErrorHandlerService {
       //   }
       // });
 
-      this.logger.log(`Critical alert notifications sent for webhook failure: ${event.id}`);
+      this.logger.log(
+        `Critical alert notifications sent for webhook failure: ${event.id}`,
+      );
     } catch (notificationError) {
-      this.logger.error('Failed to send critical webhook failure notifications:', notificationError.stack);
+      this.logger.error(
+        'Failed to send critical webhook failure notifications:',
+        notificationError.stack,
+      );
     }
   }
 
   /**
    * Validate webhook event data integrity
    */
-  validateEventData(event: Stripe.Event): { isValid: boolean; errors: string[] } {
+  validateEventData(event: Stripe.Event): {
+    isValid: boolean;
+    errors: string[];
+  } {
     const errors: string[] = [];
 
     // Basic event structure validation
     if (!event.id) errors.push('Missing event ID');
     if (!event.type) errors.push('Missing event type');
     if (!event.data || !event.data.object) errors.push('Missing event data');
-    if (typeof event.created !== 'number') errors.push('Invalid created timestamp');
+    if (typeof event.created !== 'number')
+      errors.push('Invalid created timestamp');
 
     // Event-specific validations
     switch (event.type) {
@@ -232,7 +255,7 @@ export class WebhookErrorHandlerService {
 
     return {
       isValid: errors.length === 0,
-      errors
+      errors,
     };
   }
 

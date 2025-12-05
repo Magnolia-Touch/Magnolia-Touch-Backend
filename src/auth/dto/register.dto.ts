@@ -1,4 +1,4 @@
-import { Role } from "@prisma/client";
+import { Role } from '@prisma/client';
 
 import {
   IsEmail,
@@ -27,5 +27,4 @@ export class RegisterDto {
   @IsString()
   @IsNotEmpty()
   Phone: string;
-
 }

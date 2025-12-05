@@ -6,8 +6,9 @@ import { StripeModule } from 'src/stripe/stripe.module';
 import { ChurchModule } from 'src/church/church.module';
 
 @Module({
-    imports: [PrismaModule, ChurchModule, StripeModule.forRootAsync()],
-    providers: [BookingService],
-    exports: [BookingService],
-    controllers: [BookingController]
-}) export class BookingModule { }
+  imports: [PrismaModule, ChurchModule, StripeModule.forRootAsync()],
+  providers: [BookingService],
+  exports: [BookingService],
+  controllers: [BookingController],
+})
+export class BookingModule {}

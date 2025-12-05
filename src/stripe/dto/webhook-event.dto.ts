@@ -46,6 +46,7 @@ export interface PaymentIntentMetadata {
   price?: string;
   cartId?: string;
   description?: string;
+  slug?: string; //
 }
 
 export interface CheckoutSessionMetadata {

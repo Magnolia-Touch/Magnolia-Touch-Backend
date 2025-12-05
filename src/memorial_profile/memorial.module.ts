@@ -16,6 +16,7 @@ import { BiographyService } from './biography.service';
 import { SocialLinksService } from './social-links.service';
 import { GalleryController } from './gallery.controller';
 import { GalleryService } from './gallery.sevice';
+import { QrService } from 'src/qr_generator/qr.service';
 
 @Module({
   imports: [S3Module, OrdersModule, StripeModule.forRootAsync()],
@@ -25,7 +26,7 @@ import { GalleryService } from './gallery.sevice';
     EventsController,
     BiographyController,
     SocialLinksController,
-    GalleryController
+    GalleryController,
   ],
   providers: [
     MemorialProfileService,
@@ -34,7 +35,8 @@ import { GalleryService } from './gallery.sevice';
     EventsService,
     BiographyService,
     SocialLinksService,
-    GalleryService
+    GalleryService,
+    QrService,
   ],
 })
-export class MemorialProfileModule { }
+export class MemorialProfileModule {}

@@ -24,7 +24,8 @@ export class StripeService {
     private readonly webhookService: WebhookService,
   ) {
     const stripeSecretKey = this.configService.get<string>('STRIPE_SECRET_KEY');
-    if (!stripeSecretKey) throw new Error('STRIPE_SECRET_KEY is not configured');
+    if (!stripeSecretKey)
+      throw new Error('STRIPE_SECRET_KEY is not configured');
 
     this.stripe = new Stripe(stripeSecretKey, {
       apiVersion: '2025-06-30.basil',
@@ -37,7 +38,7 @@ export class StripeService {
     user_id: number,
   ): Promise<Stripe.PaymentIntent> {
     let subtotal = 0;
-    let product: any | null = null;
+    const product: any | null = null;
     const {
       shippingaddressId,
       billingaddressId,
@@ -50,13 +51,18 @@ export class StripeService {
     let billingAddress: any | null = null;
     let church: any | null = null;
     if (billingaddressId) {
-      billingAddress = await this.prisma.billingAddress.findUnique({ where: { bill_address_id: billingaddressId } })
+      billingAddress = await this.prisma.billingAddress.findUnique({
+        where: { bill_address_id: billingaddressId },
+      });
     }
     if (shippingaddressId) {
-      shippingAddress = await this.prisma.userAddress.findUnique({ where: { deli_address_id: shippingaddressId } })
-    }
-    else if (church_id) {
-      church = await this.prisma.church.findUnique({ where: { church_id: church_id } })
+      shippingAddress = await this.prisma.userAddress.findUnique({
+        where: { deli_address_id: shippingaddressId },
+      });
+    } else if (church_id) {
+      church = await this.prisma.church.findUnique({
+        where: { church_id: church_id },
+      });
     }
     try {
       //hardcode for demo
@@ -78,7 +84,9 @@ export class StripeService {
 
       // 2️⃣ Ensure subtotal > 0
       if (subtotal <= 0) {
-        throw new Error('Subtotal must be greater than 0 to create a payment intent');
+        throw new Error(
+          'Subtotal must be greater than 0 to create a payment intent',
+        );
       }
 
       const paymentIntent = await this.stripe.paymentIntents.create({
@@ -100,9 +108,8 @@ export class StripeService {
           billing_country: billingAddress?.country ?? '',
           billing_postcode: billingAddress?.postcode ?? '',
           church_name: church?.name ?? '',
-        }
+        },
       });
-
 
       this.logger.log(
         `PaymentIntent created successfully with amount: ${subtotal} ${currency}`,
@@ -152,23 +159,34 @@ export class StripeService {
     checkoutSessionDto: CheckoutSessionDto,
     user_email: string,
     user_id: number,
-
   ): Promise<Stripe.Checkout.Session> {
-    let line_items: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
-    let subtotal = 0;
-    const { shippingaddressId, billingaddressId, currency, church_id, memoryProfileId, successUrl, cancelUrl } = checkoutSessionDto;
+    const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
+    const subtotal = 0;
+    const {
+      shippingaddressId,
+      billingaddressId,
+      currency,
+      church_id,
+      memoryProfileId,
+      successUrl,
+      cancelUrl,
+    } = checkoutSessionDto;
 
     let shippingAddress: any | null = null;
     let billingAddress: any | null = null;
     let church: any | null = null;
     if (shippingaddressId) {
-      shippingAddress = await this.prisma.userAddress.findUnique({ where: { deli_address_id: shippingaddressId } })
-    }
-    else if (billingaddressId) {
-      billingAddress = await this.prisma.billingAddress.findUnique({ where: { bill_address_id: billingaddressId } })
-    }
-    else if (church_id) {
-      church = await this.prisma.church.findUnique({ where: { church_id: church_id } })
+      shippingAddress = await this.prisma.userAddress.findUnique({
+        where: { deli_address_id: shippingaddressId },
+      });
+    } else if (billingaddressId) {
+      billingAddress = await this.prisma.billingAddress.findUnique({
+        where: { bill_address_id: billingaddressId },
+      });
+    } else if (church_id) {
+      church = await this.prisma.church.findUnique({
+        where: { church_id: church_id },
+      });
     }
 
     try {
@@ -225,26 +243,32 @@ export class StripeService {
     booking_ids: string,
     booking_id?: number,
   ): Promise<Stripe.Checkout.Session> {
-    const { amount, currency, successUrl, cancelUrl } = serviceCheckoutSessionDto;
+    const { amount, currency, successUrl, cancelUrl } =
+      serviceCheckoutSessionDto;
 
     try {
-      const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] = [{
-        price_data: {
-          currency: currency.toLowerCase(),
-          product_data: {
-            name: 'Memorial Cleaning Service',
-            description: 'Professional memorial cleaning service',
+      const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] = [
+        {
+          price_data: {
+            currency: currency.toLowerCase(),
+            product_data: {
+              name: 'Memorial Cleaning Service',
+              description: 'Professional memorial cleaning service',
+            },
+            unit_amount: Math.round(amount * 100),
           },
-          unit_amount: Math.round(amount * 100),
+          quantity: 1,
         },
-        quantity: 1,
-      }];
+      ];
 
       const session = await this.stripe.checkout.sessions.create({
         payment_method_types: ['card'],
         line_items,
         mode: 'payment',
-        success_url: successUrl + '?session_id={CHECKOUT_SESSION_ID}&booking_id=' + booking_id,
+        success_url:
+          successUrl +
+          '?session_id={CHECKOUT_SESSION_ID}&booking_id=' +
+          booking_id,
         cancel_url: cancelUrl + '?booking_id=' + booking_id,
         customer_email: user_email,
         metadata: {
@@ -270,12 +294,17 @@ export class StripeService {
     }
   }
 
-  async getCheckoutSessionById(sessionId: string): Promise<Stripe.Checkout.Session | null> {
+  async getCheckoutSessionById(
+    sessionId: string,
+  ): Promise<Stripe.Checkout.Session | null> {
     try {
       const session = await this.stripe.checkout.sessions.retrieve(sessionId);
       return session;
     } catch (error) {
-      this.logger.error(`Failed to retrieve checkout session ${sessionId}:`, error.stack);
+      this.logger.error(
+        `Failed to retrieve checkout session ${sessionId}:`,
+        error.stack,
+      );
       return null;
     }
   }
@@ -287,23 +316,28 @@ export class StripeService {
     cancelUrl: string,
   ): Promise<Stripe.Checkout.Session> {
     try {
-      const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] = [{
-        price_data: {
-          currency: 'usd',
-          product_data: {
-            name: 'Memorial Cleaning Service',
-            description: `Cleaning service for ${booking.name_on_memorial} at ${booking.plot_no}`,
+      const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] = [
+        {
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: 'Memorial Cleaning Service',
+              description: `Cleaning service for ${booking.name_on_memorial} at ${booking.plot_no}`,
+            },
+            unit_amount: Math.round(booking.amount * 100),
           },
-          unit_amount: Math.round(booking.amount * 100),
+          quantity: 1,
         },
-        quantity: 1,
-      }];
+      ];
 
       const session = await this.stripe.checkout.sessions.create({
         payment_method_types: ['card'],
         line_items,
         mode: 'payment',
-        success_url: successUrl + '?session_id={CHECKOUT_SESSION_ID}&booking_id=' + booking.id,
+        success_url:
+          successUrl +
+          '?session_id={CHECKOUT_SESSION_ID}&booking_id=' +
+          booking.id,
         cancel_url: cancelUrl + '?booking_id=' + booking.id,
         customer_email: user_email,
         metadata: {
@@ -364,14 +398,6 @@ export class StripeService {
     }
   }
 
-
-
-
-
-
-
-
-
   async createCheckoutLinkForExistingOrder(
     order: any,
     user_email: string,
@@ -407,12 +433,21 @@ export class StripeService {
         success_url: `${successUrl}?session_id={CHECKOUT_SESSION_ID}&order_id=${order.id}`,
         cancel_url: `${cancelUrl}?order_id=${order.id}`,
         customer_email: user_email,
+
         metadata: {
           order_id: String(order.id),
           orderNumber: order.orderNumber,
           booking_ids: order.booking_ids ?? '',
           description: 'Payment for Ordering Memorial Profile QR Code',
           user_email,
+          slug: order.memoryProfileId,
+        },
+
+        payment_intent_data: {
+          metadata: {
+            order_id: String(order.id),
+            slug: order.memoryProfileId,
+          },
         },
       });
 
@@ -429,5 +464,4 @@ export class StripeService {
       throw error;
     }
   }
-
 }

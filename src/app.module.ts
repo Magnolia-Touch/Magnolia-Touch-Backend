@@ -24,30 +24,31 @@ import { RevenueModule } from './revenue/revenue.module';
 import { ContactFormModule } from './contact-form/contact-form.module';
 
 @Module({
-  imports: [ConfigModule.forRoot({
-    isGlobal: true, // makes ConfigService available app-wide
-  }),
-  MailerModule.forRoot({
-    transport: {
-      host: 'smtp.gmail.com',       // your SMTP host
-      port: 587,
-      secure: false,
-      auth: {
-        user: process.env.MAIL_USER,
-        pass: process.env.MAIL_PASS,
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true, // makes ConfigService available app-wide
+    }),
+    MailerModule.forRoot({
+      transport: {
+        host: 'smtp.gmail.com', // your SMTP host
+        port: 587,
+        secure: false,
+        auth: {
+          user: process.env.MAIL_USER,
+          pass: process.env.MAIL_PASS,
+        },
       },
-    },
-    defaults: {
-      from: '"No Reply" <no-wishyougrowth@gmail.com>',
-    },
-    template: {
-      dir: join(process.cwd(), 'src/templates'), // ✅ absolute path
-      adapter: new PugAdapter(),
-      options: {
-        strict: true,
+      defaults: {
+        from: '"No Reply" <no-wishyougrowth@gmail.com>',
       },
-    }
-  }),
+      template: {
+        dir: join(process.cwd(), 'src/templates'), // ✅ absolute path
+        adapter: new PugAdapter(),
+        options: {
+          strict: true,
+        },
+      },
+    }),
 
     UserModule,
     AuthModule,
@@ -66,9 +67,9 @@ import { ContactFormModule } from './contact-form/contact-form.module';
     OrdersModule,
     RevenueModule,
     ContactFormModule,
-  StripeModule.forRootAsync()],
+    StripeModule.forRootAsync(),
+  ],
   controllers: [AppController],
   providers: [AppService],
 })
-
-export class AppModule { }
+export class AppModule {}

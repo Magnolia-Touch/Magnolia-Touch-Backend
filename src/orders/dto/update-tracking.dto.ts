@@ -2,7 +2,7 @@
 import { IsOptional, IsString } from 'class-validator';
 
 export class UpdateTrackingDto {
-    @IsOptional()
-    @IsString()
-    tracking_details?: string;
+  @IsOptional()
+  @IsString()
+  tracking_details?: string;
 }

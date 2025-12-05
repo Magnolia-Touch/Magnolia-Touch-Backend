@@ -6,14 +6,14 @@ import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class QrService {
-  constructor(private readonly s3Service: S3Service,
-    private prisma: PrismaService
-
-  ) { }
+  constructor(
+    private readonly s3Service: S3Service,
+    private prisma: PrismaService,
+  ) {}
 
   async generateAndSaveQRCode(
     link: string,
-    filename: string
+    filename: string,
   ): Promise<{ url: string; data: any }> {
     try {
       const qrBuffer = await QRCode.toBuffer(link);
@@ -22,22 +22,25 @@ export class QrService {
         qrBuffer,
         `${filename}.png`,
         'image/png',
-        'qr-codes'
+        'qr-codes',
       );
 
       const data = await this.prisma.qrCode.create({
-        data: { filename, url: s3Url }
+        data: { filename, url: s3Url },
       });
 
       return { url: s3Url, data };
     } catch (error) {
-      throw new Error(`Failed to generate and upload QR code: ${error.message}`);
+      throw new Error(
+        `Failed to generate and upload QR code: ${error.message}`,
+      );
     }
   }
 
-
   // 👇 New function to check existence
-  async checkQRCodeExists(slug: string): Promise<{ exists: boolean; url?: string }> {
+  async checkQRCodeExists(
+    slug: string,
+  ): Promise<{ exists: boolean; url?: string }> {
     const key = `qr-codes/${slug}.png`;
 
     const exists = await this.s3Service.fileExists(key);
@@ -48,13 +51,11 @@ export class QrService {
     }
 
     return { exists: false };
-
-
   }
   async getQrCode(filename: string) {
-    console.log("filename", filename)
+    console.log('filename', filename);
     const qr = await this.prisma.qrCode.findUnique({
-      where: { filename: filename }
+      where: { filename: filename },
     });
 
     if (!qr) {
@@ -63,5 +64,4 @@ export class QrService {
 
     return qr; // contains { id, filename, url, ... }
   }
-
 }
