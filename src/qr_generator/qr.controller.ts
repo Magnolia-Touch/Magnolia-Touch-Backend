@@ -26,7 +26,7 @@ export class QrController {
     return this.qrService.checkQRCodeExists(slug);
   }
 
-  @Get(':filename')
+  @Get('filename')
   async getQrCode(@Query('filename') filename: string) {
     const qr = await this.qrService.getQrCode(filename);
     if (!qr) {
