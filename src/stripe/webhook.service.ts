@@ -21,7 +21,7 @@ export class WebhookService {
     private readonly configService: ConfigService,
     private readonly errorHandler: WebhookErrorHandlerService,
     private readonly qr: QrService,
-  ) {}
+  ) { }
 
   verifyWebhookSignature(
     body: Buffer,
@@ -136,7 +136,7 @@ export class WebhookService {
       if (!slug) {
         throw new Error('Slug missing in PaymentIntent metadata!');
       }
-      const link = `https://api.magnoliatouch.com/memories?code=${slug}`;
+      const link = `https://magnoliatouch.com/memorial/${slug}`;
       const qr = await this.qr.generateAndSaveQRCode(link, slug);
 
       return {
