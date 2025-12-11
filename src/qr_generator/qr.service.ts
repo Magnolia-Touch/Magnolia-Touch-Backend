@@ -9,7 +9,7 @@ export class QrService {
   constructor(
     private readonly s3Service: S3Service,
     private prisma: PrismaService,
-  ) {}
+  ) { }
 
   async generateAndSaveQRCode(
     link: string,
@@ -53,6 +53,7 @@ export class QrService {
     return { exists: false };
   }
   async getQrCode(filename: string) {
+
     console.log('filename', filename);
     const qr = await this.prisma.qrCode.findUnique({
       where: { filename: filename },
