@@ -5,12 +5,13 @@ import { RolesGuard } from 'src/common/decoraters/roles.guard';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { Roles } from 'src/common/decoraters/roles.decorator';
 
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('ADMIN')
+
 @Controller('qr')
 export class QrController {
   constructor(private readonly qrService: QrService) { }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
   @Post('generate')
   async saveQrCode(@Body() body: { link: string; filename: string }) {
     const { link, filename } = body;
