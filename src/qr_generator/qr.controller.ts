@@ -1,5 +1,5 @@
 // src/qr/qr.controller.ts
-import { Controller, Post, Body, UseGuards, Query, Get } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Query, Get, Param } from '@nestjs/common';
 import { QrService } from './qr.service';
 import { RolesGuard } from 'src/common/decoraters/roles.guard';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
@@ -9,7 +9,7 @@ import { Roles } from 'src/common/decoraters/roles.decorator';
 @Roles('ADMIN')
 @Controller('qr')
 export class QrController {
-  constructor(private readonly qrService: QrService) {}
+  constructor(private readonly qrService: QrService) { }
 
   @Post('generate')
   async saveQrCode(@Body() body: { link: string; filename: string }) {
@@ -27,7 +27,7 @@ export class QrController {
   }
 
   @Get(':filename')
-  async getQrCode(@Query('filename') filename: string) {
+  async getQrCode(@Param('filename') filename: string) {
     const qr = await this.qrService.getQrCode(filename);
     if (!qr) {
       return { success: false, message: 'QR Code not found' };
