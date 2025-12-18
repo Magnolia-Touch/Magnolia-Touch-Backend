@@ -7,7 +7,7 @@ import { OrderStatus } from '@prisma/client';
 
 @Injectable()
 export class OrdersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async create(createOrderDto: CreateOrderDto) {
     return this.prisma.orders.create({
@@ -45,23 +45,23 @@ export class OrdersService {
     };
   }
 
-  async findOne(order_number: string, userId: number) {
+  async findOne(id: number, userId: number) {
     const order = await this.prisma.orders.findFirst({
-      where: { orderNumber: order_number, User_id: userId }, // must match both id and User_id
+      where: { id: id, User_id: userId }, // must match both id and User_id
     });
 
     if (!order) {
       throw new NotFoundException(
-        `No order found with ID ${order_number} for this user`,
+        `No order found with ID ${id} for this user`,
       );
     }
 
     return order;
   }
 
-  async update(id: string, updateOrderDto: UpdateOrderDto) {
+  async update(id: number, updateOrderDto: UpdateOrderDto) {
     return this.prisma.orders.update({
-      where: { orderNumber: id },
+      where: { id: id },
       data: {
         ...updateOrderDto,
       },
@@ -69,18 +69,18 @@ export class OrdersService {
   }
 
   //ADMIN ONLY
-  async remove(id: string) {
+  async remove(id: number) {
     return this.prisma.orders.delete({
-      where: { orderNumber: id },
+      where: { id: id },
     });
   }
 
   async updateStatus(
-    order_number: string,
+    id: number,
     updatestatusdto: UpdateOrderStatusDto,
   ) {
     return this.prisma.orders.update({
-      where: { orderNumber: order_number },
+      where: { id: id },
       data: {
         status: updatestatusdto.status,
       },
@@ -130,13 +130,13 @@ export class OrdersService {
     };
   }
 
-  async findOneByAdmin(order_number: string) {
+  async findOneByAdmin(id: number) {
     const order = await this.prisma.orders.findFirst({
-      where: { orderNumber: order_number }, // must match both id and User_id
+      where: { id: id }, // must match both id and User_id
     });
     if (!order) {
       throw new NotFoundException(
-        `No order found with ID ${order_number} for this user`,
+        `No order found with ID ${id} for this user`,
       );
     }
     return order;

@@ -6,7 +6,7 @@ async saveDraftProfile(
   dto: CreateProfileDto,
   email: string,
   user_id: number,
-  existingSlug?: string,       // If provided → update draft
+  existingSlug ?: string,       // If provided → update draft
 ) {
   // If user gave slug → try to update an existing draft
   let profile: any = null;
