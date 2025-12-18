@@ -23,7 +23,7 @@ import { UpdateTrackingDto } from './dto/update-tracking.dto';
 
 @Controller('orders')
 export class OrdersController {
-  constructor(private readonly ordersService: OrdersService) {}
+  constructor(private readonly ordersService: OrdersService) { }
 
   @Post()
   create(@Body() createOrderDto: CreateOrderDto) {
@@ -46,9 +46,9 @@ export class OrdersController {
   @Get('my-orders/:id')
   async getMyOrderById(
     @Req() req,
-    @Param('order_number') order_number: string,
+    @Param('id') id: number,
   ) {
-    return this.ordersService.findOne(order_number, req.user.id);
+    return this.ordersService.findOne(id, req.user.id);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -69,9 +69,9 @@ export class OrdersController {
   @Get('all-orders/:id')
   async getMyOrderByIdByAdmin(
     @Req() req,
-    @Param('order_number') order_number: string,
+    @Param('id') id: number,
   ) {
-    return this.ordersService.findOneByAdmin(order_number);
+    return this.ordersService.findOneByAdmin(id);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -112,20 +112,20 @@ export class OrdersController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateOrderDto: UpdateOrderDto) {
+  update(@Param('id') id: number, @Body() updateOrderDto: UpdateOrderDto) {
     return this.ordersService.update(id, updateOrderDto);
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
+  @Delete('all-orders/:id')
+  remove(@Param('id') id: number) {
     return this.ordersService.remove(id);
   }
 
-  @Patch(':order_number/status')
+  @Patch(':id/status')
   updateStatus(
-    @Param('order_number') order_number: string,
+    @Param('id') id: number,
     @Body() updatestatusdto: UpdateOrderStatusDto,
   ) {
-    return this.ordersService.updateStatus(order_number, updatestatusdto);
+    return this.ordersService.updateStatus(id, updatestatusdto);
   }
 }
