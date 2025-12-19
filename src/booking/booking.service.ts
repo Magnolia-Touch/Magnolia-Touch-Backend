@@ -23,7 +23,7 @@ export class BookingService {
     private prisma: PrismaService,
     private stipeservice: StripeService,
     private churchservice: ChurchService,
-  ) {}
+  ) { }
 
   private ensureHttpsUrl(url: string): string {
     if (!url) return url;
@@ -61,6 +61,7 @@ export class BookingService {
       state,
       subscription_id,
       flower_id,
+      notes
     } = bookingdto;
 
     // Dates
@@ -141,6 +142,7 @@ export class BookingService {
           Flower_id: flower_id ?? null,
           booking_date: new Date(),
           anniversary_date: newAnniversaryDate,
+          notes: notes,
           no_of_subscription_years: totalYears,
           status: 'PENDING',
           is_bought: false,
@@ -546,6 +548,7 @@ export class BookingService {
           first_cleaning_date: true,
           second_cleaning_date: true,
           status: true,
+          notes: true,
           createdAt: true,
           Flower_id: true, // ✅ needed to check if flower included
           user: {

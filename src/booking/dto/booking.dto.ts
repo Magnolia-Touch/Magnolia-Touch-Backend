@@ -17,6 +17,9 @@ export class CreateBookingDto {
   church_name: string;
 
   @IsString()
+  notes: string;
+
+  @IsString()
   plot_no: string;
 
   @IsString()

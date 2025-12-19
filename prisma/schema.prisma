@@ -206,6 +206,7 @@ model Booking {
   name_on_memorial         String
   plot_no                  String?
   User_id                  Int
+  notes                    String?        @db.Text
   church_id                Int
   Subscription_id          Int?
   amount                   Int            @default(0)
